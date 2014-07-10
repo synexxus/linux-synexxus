@@ -1,0 +1,1 @@
+cmd_drivers/net/ethernet/ti/ti_cpsw.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/ethernet/ti/ti_cpsw.o drivers/net/ethernet/ti/cpsw_ale.o drivers/net/ethernet/ti/cpsw.o drivers/net/ethernet/ti/cpts.o 

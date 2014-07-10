@@ -1,0 +1,1 @@
+cmd_net/nfc/hci/hci.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/nfc/hci/hci.o net/nfc/hci/core.o net/nfc/hci/hcp.o net/nfc/hci/command.o net/nfc/hci/llc.o net/nfc/hci/llc_nop.o net/nfc/hci/llc_shdlc.o 

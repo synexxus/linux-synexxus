@@ -1,0 +1,8 @@
+kernel/drivers/staging/imx-drm/imxdrm.ko
+kernel/drivers/staging/imx-drm/parallel-display.ko
+kernel/drivers/staging/imx-drm/imx-tve.ko
+kernel/drivers/staging/imx-drm/imx-ldb.ko
+kernel/drivers/staging/imx-drm/imx-ipuv3-crtc.ko
+kernel/drivers/staging/imx-drm/imx-hdmi.ko
+kernel/drivers/staging/imx-drm/ipu-v3/imx-ipu-v3.ko
+kernel/drivers/staging/nvec/nvec.ko

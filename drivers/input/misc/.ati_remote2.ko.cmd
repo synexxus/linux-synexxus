@@ -1,0 +1,1 @@
+cmd_drivers/input/misc/ati_remote2.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/misc/ati_remote2.ko drivers/input/misc/ati_remote2.o drivers/input/misc/ati_remote2.mod.o

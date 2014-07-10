@@ -1,0 +1,1 @@
+arch/arm/boot/dts/sun4i-a10-pcduino.dtb: arch/arm/boot/dts/.sun4i-a10-pcduino.dtb.dts.tmp arch/arm/boot/dts/sun4i-a10.dtsi arch/arm/boot/dts/skeleton.dtsi arch/arm/boot/dts/sunxi-common-regulators.dtsi

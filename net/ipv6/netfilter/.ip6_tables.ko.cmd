@@ -1,0 +1,1 @@
+cmd_net/ipv6/netfilter/ip6_tables.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o net/ipv6/netfilter/ip6_tables.ko net/ipv6/netfilter/ip6_tables.o net/ipv6/netfilter/ip6_tables.mod.o

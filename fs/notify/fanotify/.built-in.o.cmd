@@ -1,0 +1,1 @@
+cmd_fs/notify/fanotify/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/notify/fanotify/built-in.o fs/notify/fanotify/fanotify.o fs/notify/fanotify/fanotify_user.o 

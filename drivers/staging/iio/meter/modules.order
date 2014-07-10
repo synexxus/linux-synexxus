@@ -1,0 +1,7 @@
+kernel/drivers/staging/iio/meter/ade7753.ko
+kernel/drivers/staging/iio/meter/ade7754.ko
+kernel/drivers/staging/iio/meter/ade7758.ko
+kernel/drivers/staging/iio/meter/ade7759.ko
+kernel/drivers/staging/iio/meter/ade7854.ko
+kernel/drivers/staging/iio/meter/ade7854-i2c.ko
+kernel/drivers/staging/iio/meter/ade7854-spi.ko

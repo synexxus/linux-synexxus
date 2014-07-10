@@ -1,0 +1,1 @@
+cmd_drivers/media/radio/si470x/radio-i2c-si470x.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/radio/si470x/radio-i2c-si470x.o drivers/media/radio/si470x/radio-si470x-i2c.o drivers/media/radio/si470x/radio-si470x-common.o 

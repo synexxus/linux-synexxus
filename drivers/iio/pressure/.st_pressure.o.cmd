@@ -1,0 +1,1 @@
+cmd_drivers/iio/pressure/st_pressure.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/iio/pressure/st_pressure.o drivers/iio/pressure/st_pressure_core.o drivers/iio/pressure/st_pressure_buffer.o 

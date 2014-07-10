@@ -1,0 +1,1 @@
+cmd_drivers/thermal/thermal_sys.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/thermal/thermal_sys.o drivers/thermal/thermal_core.o drivers/thermal/thermal_hwmon.o drivers/thermal/of-thermal.o drivers/thermal/fair_share.o drivers/thermal/step_wise.o drivers/thermal/cpu_cooling.o 

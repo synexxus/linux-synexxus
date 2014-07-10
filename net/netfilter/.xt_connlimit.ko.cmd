@@ -1,0 +1,1 @@
+cmd_net/netfilter/xt_connlimit.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o net/netfilter/xt_connlimit.ko net/netfilter/xt_connlimit.o net/netfilter/xt_connlimit.mod.o

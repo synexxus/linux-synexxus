@@ -1,0 +1,1 @@
+cmd_drivers/w1/slaves/w1_therm.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/w1/slaves/w1_therm.ko drivers/w1/slaves/w1_therm.o drivers/w1/slaves/w1_therm.mod.o

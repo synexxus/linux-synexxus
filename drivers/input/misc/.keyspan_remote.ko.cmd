@@ -1,0 +1,1 @@
+cmd_drivers/input/misc/keyspan_remote.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/misc/keyspan_remote.ko drivers/input/misc/keyspan_remote.o drivers/input/misc/keyspan_remote.mod.o

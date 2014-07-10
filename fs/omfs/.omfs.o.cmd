@@ -1,0 +1,1 @@
+cmd_fs/omfs/omfs.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/omfs/omfs.o fs/omfs/bitmap.o fs/omfs/dir.o fs/omfs/file.o fs/omfs/inode.o 

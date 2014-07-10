@@ -1,0 +1,16 @@
+kernel/sound/soc/codecs/snd-soc-alc5632.ko
+kernel/sound/soc/codecs/snd-soc-dmic.ko
+kernel/sound/soc/codecs/snd-soc-max98090.ko
+kernel/sound/soc/codecs/snd-soc-mc13783.ko
+kernel/sound/soc/codecs/snd-soc-hdmi-codec.ko
+kernel/sound/soc/codecs/snd-soc-rt5640.ko
+kernel/sound/soc/codecs/snd-soc-sgtl5000.ko
+kernel/sound/soc/codecs/snd-soc-tlv320aic23.ko
+kernel/sound/soc/codecs/snd-soc-tlv320aic23-i2c.ko
+kernel/sound/soc/codecs/snd-soc-tlv320aic3x.ko
+kernel/sound/soc/codecs/snd-soc-twl4030.ko
+kernel/sound/soc/codecs/snd-soc-twl6040.ko
+kernel/sound/soc/codecs/snd-soc-wm8753.ko
+kernel/sound/soc/codecs/snd-soc-wm8903.ko
+kernel/sound/soc/codecs/snd-soc-wm8962.ko
+kernel/sound/soc/codecs/snd-soc-tpa6130a2.ko

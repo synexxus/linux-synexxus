@@ -1,0 +1,1 @@
+arch/arm/boot/dts/omap4-var-som.dtb: arch/arm/boot/dts/.omap4-var-som.dtb.dts.tmp arch/arm/boot/dts/omap44xx-clocks.dtsi arch/arm/boot/dts/omap443x-clocks.dtsi

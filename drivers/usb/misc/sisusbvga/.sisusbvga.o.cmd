@@ -1,0 +1,1 @@
+cmd_drivers/usb/misc/sisusbvga/sisusbvga.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/usb/misc/sisusbvga/sisusbvga.o drivers/usb/misc/sisusbvga/sisusb.o drivers/usb/misc/sisusbvga/sisusb_init.o drivers/usb/misc/sisusbvga/sisusb_con.o 

@@ -1,0 +1,1 @@
+cmd_net/sched/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/sched/built-in.o net/sched/sch_generic.o net/sched/sch_mq.o net/sched/sch_api.o net/sched/sch_blackhole.o net/sched/cls_api.o net/sched/act_api.o net/sched/sch_fifo.o net/sched/ematch.o 

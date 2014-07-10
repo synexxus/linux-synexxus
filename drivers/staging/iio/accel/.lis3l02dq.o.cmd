@@ -1,0 +1,1 @@
+cmd_drivers/staging/iio/accel/lis3l02dq.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/staging/iio/accel/lis3l02dq.o drivers/staging/iio/accel/lis3l02dq_core.o drivers/staging/iio/accel/lis3l02dq_ring.o 

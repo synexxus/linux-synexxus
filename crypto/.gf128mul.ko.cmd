@@ -1,0 +1,1 @@
+cmd_crypto/gf128mul.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o crypto/gf128mul.ko crypto/gf128mul.o crypto/gf128mul.mod.o

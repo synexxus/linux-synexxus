@@ -1,0 +1,1 @@
+cmd_fs/minix/minix.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/minix/minix.o fs/minix/bitmap.o fs/minix/itree_v1.o fs/minix/itree_v2.o fs/minix/namei.o fs/minix/inode.o fs/minix/file.o fs/minix/dir.o 

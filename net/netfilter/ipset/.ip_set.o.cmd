@@ -1,0 +1,1 @@
+cmd_net/netfilter/ipset/ip_set.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/netfilter/ipset/ip_set.o net/netfilter/ipset/ip_set_core.o net/netfilter/ipset/ip_set_getport.o net/netfilter/ipset/pfxlen.o 

@@ -1,0 +1,1 @@
+cmd_arch/arm/oprofile/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o arch/arm/oprofile/built-in.o arch/arm/oprofile/oprofile.o 

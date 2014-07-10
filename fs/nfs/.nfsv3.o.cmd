@@ -1,0 +1,1 @@
+cmd_fs/nfs/nfsv3.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/nfs/nfsv3.o fs/nfs/nfs3super.o fs/nfs/nfs3client.o fs/nfs/nfs3proc.o fs/nfs/nfs3xdr.o fs/nfs/nfs3acl.o 

@@ -1,0 +1,1 @@
+cmd_drivers/media/dvb-frontends/stv0900.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/dvb-frontends/stv0900.o drivers/media/dvb-frontends/stv0900_core.o drivers/media/dvb-frontends/stv0900_sw.o 

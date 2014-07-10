@@ -1,0 +1,1 @@
+sun4i-a10-inet97fv2.o: arch/arm/boot/dts/sun4i-a10-inet97fv2.dts

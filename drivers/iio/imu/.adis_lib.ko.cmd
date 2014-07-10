@@ -1,0 +1,1 @@
+cmd_drivers/iio/imu/adis_lib.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/iio/imu/adis_lib.ko drivers/iio/imu/adis_lib.o drivers/iio/imu/adis_lib.mod.o

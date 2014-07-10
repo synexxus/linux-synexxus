@@ -1,0 +1,1 @@
+cmd_lib/zlib_deflate/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o lib/zlib_deflate/built-in.o lib/zlib_deflate/zlib_deflate.o 

@@ -1,0 +1,1 @@
+cmd_drivers/phy/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/phy/built-in.o drivers/phy/phy-core.o drivers/phy/phy-omap-control.o drivers/phy/phy-omap-usb2.o drivers/phy/phy-ti-pipe3.o drivers/phy/phy-twl4030-usb.o drivers/phy/phy-sun4i-usb.o 

@@ -1,0 +1,1 @@
+cmd_sound/soc/fsl/imx-pcm-dma.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/soc/fsl/imx-pcm-dma.ko sound/soc/fsl/imx-pcm-dma.o sound/soc/fsl/imx-pcm-dma.mod.o

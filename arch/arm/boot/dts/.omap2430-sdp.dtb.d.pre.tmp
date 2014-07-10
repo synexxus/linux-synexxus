@@ -1,0 +1,6 @@
+omap2430-sdp.o: arch/arm/boot/dts/omap2430-sdp.dts \
+ arch/arm/boot/dts/omap2430.dtsi arch/arm/boot/dts/omap2.dtsi \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/gpio/gpio.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/interrupt-controller/irq.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/pinctrl/omap.h \
+ arch/arm/boot/dts/skeleton.dtsi arch/arm/boot/dts/twl4030.dtsi

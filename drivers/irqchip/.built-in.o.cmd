@@ -1,0 +1,1 @@
+cmd_drivers/irqchip/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/irqchip/built-in.o drivers/irqchip/irqchip.o drivers/irqchip/irq-sun4i.o drivers/irqchip/irq-sunxi-nmi.o drivers/irqchip/irq-gic.o drivers/irqchip/irq-crossbar.o 

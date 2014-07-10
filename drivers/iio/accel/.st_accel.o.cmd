@@ -1,0 +1,1 @@
+cmd_drivers/iio/accel/st_accel.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/iio/accel/st_accel.o drivers/iio/accel/st_accel_core.o drivers/iio/accel/st_accel_buffer.o 

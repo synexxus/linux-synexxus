@@ -1,0 +1,1 @@
+cmd_lib/xz/xz_dec.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o lib/xz/xz_dec.o lib/xz/xz_dec_syms.o lib/xz/xz_dec_stream.o lib/xz/xz_dec_lzma2.o lib/xz/xz_dec_bcj.o 

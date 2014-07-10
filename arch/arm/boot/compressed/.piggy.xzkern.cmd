@@ -1,0 +1,1 @@
+cmd_arch/arm/boot/compressed/piggy.xzkern := (cat arch/arm/boot/compressed/../Image | sh /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/xz_wrap.sh && printf \\\\260\\\\305\\\\326\\\\000) > arch/arm/boot/compressed/piggy.xzkern || (rm -f arch/arm/boot/compressed/piggy.xzkern ; false)

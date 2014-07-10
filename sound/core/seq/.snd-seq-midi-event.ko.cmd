@@ -1,0 +1,1 @@
+cmd_sound/core/seq/snd-seq-midi-event.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/core/seq/snd-seq-midi-event.ko sound/core/seq/snd-seq-midi-event.o sound/core/seq/snd-seq-midi-event.mod.o

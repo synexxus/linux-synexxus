@@ -1,0 +1,1 @@
+cmd_drivers/misc/eeprom/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/misc/eeprom/built-in.o drivers/misc/eeprom/at24.o drivers/misc/eeprom/at25.o drivers/misc/eeprom/eeprom_93cx6.o drivers/misc/eeprom/sunxi_sid.o 

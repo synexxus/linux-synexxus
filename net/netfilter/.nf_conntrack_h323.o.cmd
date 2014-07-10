@@ -1,0 +1,1 @@
+cmd_net/netfilter/nf_conntrack_h323.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/netfilter/nf_conntrack_h323.o net/netfilter/nf_conntrack_h323_main.o net/netfilter/nf_conntrack_h323_asn1.o 

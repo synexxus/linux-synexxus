@@ -1,0 +1,1 @@
+cmd_drivers/video/fbdev/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/video/fbdev/built-in.o drivers/video/fbdev/core/built-in.o drivers/video/fbdev/omap2/built-in.o drivers/video/fbdev/ssd1307fb.o 

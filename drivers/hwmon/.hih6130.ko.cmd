@@ -1,0 +1,1 @@
+cmd_drivers/hwmon/hih6130.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/hwmon/hih6130.ko drivers/hwmon/hih6130.o drivers/hwmon/hih6130.mod.o

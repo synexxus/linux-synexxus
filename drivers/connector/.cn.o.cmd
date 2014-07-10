@@ -1,0 +1,1 @@
+cmd_drivers/connector/cn.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/connector/cn.o drivers/connector/cn_queue.o drivers/connector/connector.o 

@@ -1,0 +1,5 @@
+kernel/drivers/power/generic-adc-battery.ko
+kernel/drivers/power/bq27x00_battery.ko
+kernel/drivers/power/da9052-battery.ko
+kernel/drivers/power/isp1704_charger.ko
+kernel/drivers/power/gpio-charger.ko

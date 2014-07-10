@@ -1,0 +1,1 @@
+cmd_drivers/dma/dw/dw_dmac.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/dma/dw/dw_dmac.o drivers/dma/dw/platform.o 

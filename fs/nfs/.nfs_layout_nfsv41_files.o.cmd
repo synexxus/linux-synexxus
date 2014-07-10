@@ -1,0 +1,1 @@
+cmd_fs/nfs/nfs_layout_nfsv41_files.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/nfs/nfs_layout_nfsv41_files.o fs/nfs/nfs4filelayout.o fs/nfs/nfs4filelayoutdev.o 

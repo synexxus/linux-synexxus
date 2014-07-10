@@ -1,0 +1,1 @@
+cmd_drivers/input/input-polldev.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/input-polldev.ko drivers/input/input-polldev.o drivers/input/input-polldev.mod.o

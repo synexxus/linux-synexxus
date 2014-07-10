@@ -1,0 +1,1 @@
+cmd_drivers/input/serio/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/input/serio/built-in.o drivers/input/serio/serio.o drivers/input/serio/serport.o drivers/input/serio/libps2.o 

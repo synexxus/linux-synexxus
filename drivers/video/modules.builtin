@@ -1,0 +1,17 @@
+kernel/drivers/video/backlight/backlight.ko
+kernel/drivers/video/console/fbcon.ko
+kernel/drivers/video/console/bitblit.ko
+kernel/drivers/video/console/softcursor.ko
+kernel/drivers/video/console/tileblit.ko
+kernel/drivers/video/fbdev/ssd1307fb.ko
+kernel/drivers/video/fbdev/core/fb.ko
+kernel/drivers/video/fbdev/core/sysfillrect.ko
+kernel/drivers/video/fbdev/core/syscopyarea.ko
+kernel/drivers/video/fbdev/core/sysimgblt.ko
+kernel/drivers/video/fbdev/core/fb_sys_fops.ko
+kernel/drivers/video/fbdev/omap2/displays-new/encoder-tfp410.ko
+kernel/drivers/video/fbdev/omap2/displays-new/encoder-tpd12s015.ko
+kernel/drivers/video/fbdev/omap2/displays-new/connector-dvi.ko
+kernel/drivers/video/fbdev/omap2/displays-new/connector-hdmi.ko
+kernel/drivers/video/fbdev/omap2/displays-new/panel-dpi.ko
+kernel/drivers/video/fbdev/omap2/dss/omapdss.ko

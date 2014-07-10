@@ -1,0 +1,8 @@
+kernel/sound/soc/tegra/snd-soc-tegra-pcm.ko
+kernel/sound/soc/tegra/snd-soc-tegra-utils.ko
+kernel/sound/soc/tegra/snd-soc-tegra-rt5640.ko
+kernel/sound/soc/tegra/snd-soc-tegra-wm8753.ko
+kernel/sound/soc/tegra/snd-soc-tegra-wm8903.ko
+kernel/sound/soc/tegra/snd-soc-tegra-trimslice.ko
+kernel/sound/soc/tegra/snd-soc-tegra-alc5632.ko
+kernel/sound/soc/tegra/snd-soc-tegra-max98090.ko

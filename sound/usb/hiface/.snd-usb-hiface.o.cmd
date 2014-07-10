@@ -1,0 +1,1 @@
+cmd_sound/usb/hiface/snd-usb-hiface.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o sound/usb/hiface/snd-usb-hiface.o sound/usb/hiface/chip.o sound/usb/hiface/pcm.o 

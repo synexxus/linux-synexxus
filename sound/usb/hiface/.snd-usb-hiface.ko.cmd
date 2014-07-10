@@ -1,0 +1,1 @@
+cmd_sound/usb/hiface/snd-usb-hiface.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/usb/hiface/snd-usb-hiface.ko sound/usb/hiface/snd-usb-hiface.o sound/usb/hiface/snd-usb-hiface.mod.o

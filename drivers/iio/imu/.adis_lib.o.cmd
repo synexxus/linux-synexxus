@@ -1,0 +1,1 @@
+cmd_drivers/iio/imu/adis_lib.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/iio/imu/adis_lib.o drivers/iio/imu/adis.o drivers/iio/imu/adis_trigger.o drivers/iio/imu/adis_buffer.o 

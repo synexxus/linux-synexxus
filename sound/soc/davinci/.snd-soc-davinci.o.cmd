@@ -1,0 +1,1 @@
+cmd_sound/soc/davinci/snd-soc-davinci.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o sound/soc/davinci/snd-soc-davinci.o sound/soc/davinci/davinci-pcm.o 

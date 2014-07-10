@@ -1,0 +1,1 @@
+cmd_drivers/char/agp/built-in.o :=  rm -f drivers/char/agp/built-in.o; /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ar rcsD drivers/char/agp/built-in.o

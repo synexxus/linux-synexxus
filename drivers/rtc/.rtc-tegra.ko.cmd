@@ -1,0 +1,1 @@
+cmd_drivers/rtc/rtc-tegra.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/rtc/rtc-tegra.ko drivers/rtc/rtc-tegra.o drivers/rtc/rtc-tegra.mod.o

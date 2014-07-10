@@ -1,0 +1,1 @@
+cmd_net/wimax/wimax.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/wimax/wimax.o net/wimax/id-table.o net/wimax/op-msg.o net/wimax/op-reset.o net/wimax/op-rfkill.o net/wimax/op-state-get.o net/wimax/stack.o net/wimax/debugfs.o 

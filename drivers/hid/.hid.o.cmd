@@ -1,0 +1,1 @@
+cmd_drivers/hid/hid.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/hid/hid.o drivers/hid/hid-debug.o drivers/hid/hid-core.o drivers/hid/hid-input.o drivers/hid/hidraw.o 

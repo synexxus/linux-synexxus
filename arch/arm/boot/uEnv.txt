@@ -1,0 +1,39 @@
+initrd_high=0xffffffff
+fdt_high=0xffffffff
+
+fdtfile=imx6q-aristeus.dtb
+
+console=ttymxc0,115200n8
+optargs=console=tty0
+video=
+
+#Un-comment to enable systemd in Debian wheezy
+optargs=quiet init=/lib/systemd/systemd
+
+mmcroot=/dev/mmcblk0p2 ro
+
+#this gets complex when both microSD & MMC media is present at bootup:
+#microSD:
+#mmcroot=/dev/mmcblk0p2 ro
+#MMC:
+#mmcroot=/dev/mmcblk1p2 ro
+
+mmcrootfstype=ext4 rootwait fixrtc
+
+loadkernel=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage
+#loadinitrd=load mmc ${mmcdev}:${mmcpart} 0x12A00000 initrd.img; setenv initrd_size ${filesize}
+loadfdt = load mmc ${mmcdev}:${mmcpart} 0x11000000 /dtbs/${fdtfile}
+
+#zImage/initrd.img:
+#boot_fdt=run loadkernel; run loadinitrd; run loadfdt
+
+#zImage:
+boot_fdt=run loadkernel; run loadfdt
+
+mmcargs = setenv bootargs console=${console} ${optargs} root=${mmcroot} rootfstype=${mmcrootfstype} video=${video}
+
+#zImage/initrd.img:
+#uenvcmd=run boot_fdt; run mmcargs; bootz ${loadaddr} 0x12A00000:${initrd_size} 0x11000000
+
+#zImage:
+uenvcmd=run boot_fdt; run mmcargs; bootz ${loadaddr} - 0x11000000

@@ -1,0 +1,1 @@
+cmd_fs/nfs/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/nfs/built-in.o fs/nfs/nfs.o fs/nfs/nfsv2.o fs/nfs/nfsv3.o fs/nfs/nfsv4.o fs/nfs/nfs_layout_nfsv41_files.o 

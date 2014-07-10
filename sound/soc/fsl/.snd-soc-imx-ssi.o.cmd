@@ -1,0 +1,1 @@
+cmd_sound/soc/fsl/snd-soc-imx-ssi.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o sound/soc/fsl/snd-soc-imx-ssi.o sound/soc/fsl/imx-ssi.o 

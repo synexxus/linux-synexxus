@@ -1,0 +1,1 @@
+cmd_drivers/iio/common/st_sensors/st_sensors.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/iio/common/st_sensors/st_sensors.o drivers/iio/common/st_sensors/st_sensors_core.o drivers/iio/common/st_sensors/st_sensors_buffer.o drivers/iio/common/st_sensors/st_sensors_trigger.o 

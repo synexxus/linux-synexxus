@@ -1,0 +1,1 @@
+cmd_drivers/net/can/usb/peak_usb/peak_usb.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/can/usb/peak_usb/peak_usb.o drivers/net/can/usb/peak_usb/pcan_usb_core.o drivers/net/can/usb/peak_usb/pcan_usb.o drivers/net/can/usb/peak_usb/pcan_usb_pro.o 

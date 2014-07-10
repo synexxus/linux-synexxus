@@ -1,0 +1,1 @@
+cmd_net/9p/9pnet_virtio.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/9p/9pnet_virtio.o net/9p/trans_virtio.o 

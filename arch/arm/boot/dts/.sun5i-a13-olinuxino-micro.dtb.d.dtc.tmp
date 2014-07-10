@@ -1,0 +1,1 @@
+arch/arm/boot/dts/sun5i-a13-olinuxino-micro.dtb: arch/arm/boot/dts/.sun5i-a13-olinuxino-micro.dtb.dts.tmp arch/arm/boot/dts/sun5i-a13.dtsi arch/arm/boot/dts/skeleton.dtsi arch/arm/boot/dts/sunxi-common-regulators.dtsi

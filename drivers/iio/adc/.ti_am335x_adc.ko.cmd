@@ -1,0 +1,1 @@
+cmd_drivers/iio/adc/ti_am335x_adc.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/iio/adc/ti_am335x_adc.ko drivers/iio/adc/ti_am335x_adc.o drivers/iio/adc/ti_am335x_adc.mod.o

@@ -1,0 +1,8 @@
+imx27-phytec-phycore-rdk.o: \
+ arch/arm/boot/dts/imx27-phytec-phycore-rdk.dts \
+ arch/arm/boot/dts/imx27-phytec-phycore-som.dtsi \
+ arch/arm/boot/dts/imx27.dtsi arch/arm/boot/dts/skeleton.dtsi \
+ arch/arm/boot/dts/imx27-pinfunc.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/input/input.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/interrupt-controller/irq.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/gpio/gpio.h

@@ -1,0 +1,1 @@
+cmd_drivers/thermal/ti-soc-thermal/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/thermal/ti-soc-thermal/built-in.o drivers/thermal/ti-soc-thermal/ti-soc-thermal.o 

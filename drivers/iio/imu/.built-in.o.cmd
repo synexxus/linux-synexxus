@@ -1,0 +1,1 @@
+cmd_drivers/iio/imu/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/iio/imu/built-in.o drivers/iio/imu/inv_mpu6050/built-in.o 

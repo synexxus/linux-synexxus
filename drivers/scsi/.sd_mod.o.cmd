@@ -1,0 +1,1 @@
+cmd_drivers/scsi/sd_mod.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/scsi/sd_mod.o drivers/scsi/sd.o drivers/scsi/sd_dif.o 

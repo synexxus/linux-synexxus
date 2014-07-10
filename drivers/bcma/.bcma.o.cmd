@@ -1,0 +1,1 @@
+cmd_drivers/bcma/bcma.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/bcma/bcma.o drivers/bcma/main.o drivers/bcma/scan.o drivers/bcma/core.o drivers/bcma/sprom.o drivers/bcma/driver_chipcommon.o drivers/bcma/driver_chipcommon_pmu.o drivers/bcma/driver_pci.o 

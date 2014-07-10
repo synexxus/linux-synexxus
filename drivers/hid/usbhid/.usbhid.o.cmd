@@ -1,0 +1,1 @@
+cmd_drivers/hid/usbhid/usbhid.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/hid/usbhid/usbhid.o drivers/hid/usbhid/hid-core.o drivers/hid/usbhid/hid-quirks.o drivers/hid/usbhid/hiddev.o drivers/hid/usbhid/hid-pidff.o 

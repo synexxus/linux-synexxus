@@ -1,0 +1,11 @@
+kernel/drivers/iio/light/adjd_s311.ko
+kernel/drivers/iio/light/apds9300.ko
+kernel/drivers/iio/light/cm32181.ko
+kernel/drivers/iio/light/cm36651.ko
+kernel/drivers/iio/light/gp2ap020a00f.ko
+kernel/drivers/iio/light/hid-sensor-als.ko
+kernel/drivers/iio/light/ltr501.ko
+kernel/drivers/iio/light/tsl2563.ko
+kernel/drivers/iio/light/tcs3472.ko
+kernel/drivers/iio/light/tsl4531.ko
+kernel/drivers/iio/light/vcnl4000.ko

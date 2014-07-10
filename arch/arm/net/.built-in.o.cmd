@@ -1,0 +1,1 @@
+cmd_arch/arm/net/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o arch/arm/net/built-in.o arch/arm/net/bpf_jit_32.o 

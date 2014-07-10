@@ -1,0 +1,1 @@
+cmd_drivers/hid/hid-zydacron.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/hid/hid-zydacron.ko drivers/hid/hid-zydacron.o drivers/hid/hid-zydacron.mod.o

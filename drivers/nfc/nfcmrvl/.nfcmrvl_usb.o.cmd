@@ -1,0 +1,1 @@
+cmd_drivers/nfc/nfcmrvl/nfcmrvl_usb.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/nfc/nfcmrvl/nfcmrvl_usb.o drivers/nfc/nfcmrvl/usb.o 

@@ -1,0 +1,1 @@
+cmd_net/nfc/nfc_digital.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/nfc/nfc_digital.o net/nfc/digital_core.o net/nfc/digital_technology.o net/nfc/digital_dep.o 

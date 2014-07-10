@@ -1,0 +1,1 @@
+cmd_drivers/leds/leds-pca9685.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/leds/leds-pca9685.ko drivers/leds/leds-pca9685.o drivers/leds/leds-pca9685.mod.o

@@ -1,0 +1,1 @@
+cmd_net/mac802154/mac802154.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/mac802154/mac802154.o net/mac802154/ieee802154_dev.o net/mac802154/rx.o net/mac802154/tx.o net/mac802154/mac_cmd.o net/mac802154/mib.o net/mac802154/monitor.o net/mac802154/wpan.o 

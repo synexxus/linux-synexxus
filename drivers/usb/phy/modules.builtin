@@ -1,0 +1,5 @@
+kernel/drivers/usb/phy/phy-generic.ko
+kernel/drivers/usb/phy/phy-twl6030-usb.ko
+kernel/drivers/usb/phy/phy-tegra-usb.ko
+kernel/drivers/usb/phy/phy-gpio-vbus-usb.ko
+kernel/drivers/usb/phy/phy-mxs-usb.ko

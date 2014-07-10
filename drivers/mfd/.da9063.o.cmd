@@ -1,0 +1,1 @@
+cmd_drivers/mfd/da9063.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/mfd/da9063.o drivers/mfd/da9063-core.o drivers/mfd/da9063-irq.o drivers/mfd/da9063-i2c.o 

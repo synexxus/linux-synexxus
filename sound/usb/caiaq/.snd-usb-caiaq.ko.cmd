@@ -1,0 +1,1 @@
+cmd_sound/usb/caiaq/snd-usb-caiaq.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/usb/caiaq/snd-usb-caiaq.ko sound/usb/caiaq/snd-usb-caiaq.o sound/usb/caiaq/snd-usb-caiaq.mod.o

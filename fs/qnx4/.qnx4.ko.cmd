@@ -1,0 +1,1 @@
+cmd_fs/qnx4/qnx4.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o fs/qnx4/qnx4.ko fs/qnx4/qnx4.o fs/qnx4/qnx4.mod.o

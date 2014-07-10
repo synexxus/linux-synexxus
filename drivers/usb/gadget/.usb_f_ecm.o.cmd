@@ -1,0 +1,1 @@
+cmd_drivers/usb/gadget/usb_f_ecm.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/usb/gadget/usb_f_ecm.o drivers/usb/gadget/f_ecm.o 

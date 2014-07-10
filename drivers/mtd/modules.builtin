@@ -1,0 +1,8 @@
+kernel/drivers/mtd/mtd.ko
+kernel/drivers/mtd/ofpart.ko
+kernel/drivers/mtd/chips/chipreg.ko
+kernel/drivers/mtd/nand/nand.ko
+kernel/drivers/mtd/nand/nand_ecc.ko
+kernel/drivers/mtd/nand/nand_bch.ko
+kernel/drivers/mtd/nand/nand_ids.ko
+kernel/drivers/mtd/onenand/onenand.ko

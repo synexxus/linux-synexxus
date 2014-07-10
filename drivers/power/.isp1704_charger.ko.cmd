@@ -1,0 +1,1 @@
+cmd_drivers/power/isp1704_charger.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/power/isp1704_charger.ko drivers/power/isp1704_charger.o drivers/power/isp1704_charger.mod.o

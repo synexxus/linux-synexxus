@@ -1,0 +1,1 @@
+cmd_drivers/media/rc/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/rc/built-in.o drivers/media/rc/keymaps/built-in.o drivers/media/rc/rc-core.o drivers/media/rc/ir-sharp-decoder.o 

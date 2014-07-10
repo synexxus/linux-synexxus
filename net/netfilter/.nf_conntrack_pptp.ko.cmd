@@ -1,0 +1,1 @@
+cmd_net/netfilter/nf_conntrack_pptp.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o net/netfilter/nf_conntrack_pptp.ko net/netfilter/nf_conntrack_pptp.o net/netfilter/nf_conntrack_pptp.mod.o

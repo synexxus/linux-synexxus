@@ -1,0 +1,1 @@
+cmd_drivers/usb/serial/mct_u232.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/usb/serial/mct_u232.ko drivers/usb/serial/mct_u232.o drivers/usb/serial/mct_u232.mod.o

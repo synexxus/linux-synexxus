@@ -1,0 +1,1 @@
+cmd_net/sched/cls_route.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o net/sched/cls_route.ko net/sched/cls_route.o net/sched/cls_route.mod.o

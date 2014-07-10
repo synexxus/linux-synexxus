@@ -1,0 +1,8 @@
+omap3-sbc-t3517.o: arch/arm/boot/dts/omap3-sbc-t3517.dts \
+ arch/arm/boot/dts/omap3-cm-t3517.dts arch/arm/boot/dts/am3517.dtsi \
+ arch/arm/boot/dts/omap3.dtsi \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/gpio/gpio.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/interrupt-controller/irq.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/pinctrl/omap.h \
+ arch/arm/boot/dts/skeleton.dtsi arch/arm/boot/dts/omap3-cm-t3x.dtsi \
+ arch/arm/boot/dts/omap3-sb-t35.dtsi

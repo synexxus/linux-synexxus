@@ -1,0 +1,1 @@
+cmd_drivers/input/misc/ad714x-spi.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/misc/ad714x-spi.ko drivers/input/misc/ad714x-spi.o drivers/input/misc/ad714x-spi.mod.o

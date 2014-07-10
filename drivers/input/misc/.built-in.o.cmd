@@ -1,0 +1,1 @@
+cmd_drivers/input/misc/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/input/misc/built-in.o drivers/input/misc/twl4030-pwrbutton.o drivers/input/misc/twl4030-vibra.o drivers/input/misc/twl6040-vibra.o drivers/input/misc/uinput.o 

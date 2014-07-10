@@ -1,0 +1,1 @@
+cmd_drivers/mtd/devices/sst25l.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/mtd/devices/sst25l.ko drivers/mtd/devices/sst25l.o drivers/mtd/devices/sst25l.mod.o

@@ -1,0 +1,1 @@
+cmd_fs/efs/efs.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/efs/efs.o fs/efs/super.o fs/efs/inode.o fs/efs/namei.o fs/efs/dir.o fs/efs/file.o fs/efs/symlink.o 

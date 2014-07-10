@@ -1,0 +1,1 @@
+cmd_net/rds/rds_tcp.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/rds/rds_tcp.o net/rds/tcp.o net/rds/tcp_connect.o net/rds/tcp_listen.o net/rds/tcp_recv.o net/rds/tcp_send.o net/rds/tcp_stats.o 

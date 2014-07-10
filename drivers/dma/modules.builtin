@@ -1,0 +1,8 @@
+kernel/drivers/dma/virt-dma.ko
+kernel/drivers/dma/imx-sdma.ko
+kernel/drivers/dma/imx-dma.ko
+kernel/drivers/dma/omap-dma.ko
+kernel/drivers/dma/cppi41.ko
+kernel/drivers/dma/fsl-edma.ko
+kernel/drivers/dma/dw/dw_dmac_core.ko
+kernel/drivers/dma/dw/dw_dmac.ko

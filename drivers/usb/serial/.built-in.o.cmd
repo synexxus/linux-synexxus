@@ -1,0 +1,1 @@
+cmd_drivers/usb/serial/built-in.o :=  rm -f drivers/usb/serial/built-in.o; /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ar rcsD drivers/usb/serial/built-in.o

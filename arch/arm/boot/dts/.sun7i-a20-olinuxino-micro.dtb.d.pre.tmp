@@ -1,0 +1,2 @@
+sun7i-a20-olinuxino-micro.o: \
+ arch/arm/boot/dts/sun7i-a20-olinuxino-micro.dts

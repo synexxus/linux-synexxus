@@ -1,0 +1,1 @@
+cmd_drivers/misc/ti-st/st_drv.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/misc/ti-st/st_drv.ko drivers/misc/ti-st/st_drv.o drivers/misc/ti-st/st_drv.mod.o

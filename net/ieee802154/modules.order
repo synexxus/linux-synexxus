@@ -1,0 +1,4 @@
+kernel/net/ieee802154/ieee802154.ko
+kernel/net/ieee802154/af_802154.ko
+kernel/net/ieee802154/6lowpan.ko
+kernel/net/ieee802154/6lowpan_iphc.ko

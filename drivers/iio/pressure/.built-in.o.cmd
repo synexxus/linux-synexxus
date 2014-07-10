@@ -1,0 +1,1 @@
+cmd_drivers/iio/pressure/built-in.o :=  rm -f drivers/iio/pressure/built-in.o; /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ar rcsD drivers/iio/pressure/built-in.o

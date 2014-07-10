@@ -1,0 +1,1 @@
+cmd_drivers/staging/imx-drm/imx-ipuv3-crtc.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/staging/imx-drm/imx-ipuv3-crtc.o drivers/staging/imx-drm/ipuv3-crtc.o drivers/staging/imx-drm/ipuv3-plane.o 

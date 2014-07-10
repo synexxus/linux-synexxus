@@ -1,0 +1,1 @@
+cmd_lib/lz4/lz4_compress.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o lib/lz4/lz4_compress.ko lib/lz4/lz4_compress.o lib/lz4/lz4_compress.mod.o

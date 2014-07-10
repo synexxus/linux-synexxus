@@ -1,0 +1,1 @@
+cmd_drivers/staging/usbip/usbip-host.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/staging/usbip/usbip-host.o drivers/staging/usbip/stub_dev.o drivers/staging/usbip/stub_main.o drivers/staging/usbip/stub_rx.o drivers/staging/usbip/stub_tx.o 

@@ -1,0 +1,1 @@
+cmd_drivers/bus/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/bus/built-in.o drivers/bus/imx-weim.o drivers/bus/omap-ocp2scp.o drivers/bus/omap_l3_smx.o drivers/bus/omap_l3_noc.o 

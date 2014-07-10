@@ -1,0 +1,1 @@
+cmd_sound/usb/6fire/snd-usb-6fire.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/usb/6fire/snd-usb-6fire.ko sound/usb/6fire/snd-usb-6fire.o sound/usb/6fire/snd-usb-6fire.mod.o

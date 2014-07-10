@@ -1,0 +1,1 @@
+cmd_drivers/usb/host/xhci-hcd.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/usb/host/xhci-hcd.o drivers/usb/host/xhci.o drivers/usb/host/xhci-mem.o drivers/usb/host/xhci-ring.o drivers/usb/host/xhci-hub.o drivers/usb/host/xhci-dbg.o drivers/usb/host/xhci-trace.o 

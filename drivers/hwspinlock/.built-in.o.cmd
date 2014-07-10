@@ -1,0 +1,1 @@
+cmd_drivers/hwspinlock/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/hwspinlock/built-in.o drivers/hwspinlock/hwspinlock_core.o drivers/hwspinlock/omap_hwspinlock.o 

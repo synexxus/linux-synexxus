@@ -1,0 +1,1 @@
+cmd_drivers/media/usb/em28xx/em28xx.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/usb/em28xx/em28xx.o drivers/media/usb/em28xx/em28xx-core.o drivers/media/usb/em28xx/em28xx-i2c.o drivers/media/usb/em28xx/em28xx-cards.o drivers/media/usb/em28xx/em28xx-camera.o 

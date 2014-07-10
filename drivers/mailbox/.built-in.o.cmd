@@ -1,0 +1,1 @@
+cmd_drivers/mailbox/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/mailbox/built-in.o drivers/mailbox/omap-mailbox.o drivers/mailbox/mailbox_omap2.o 

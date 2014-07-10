@@ -1,0 +1,1 @@
+cmd_fs/qnx4/qnx4.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/qnx4/qnx4.o fs/qnx4/inode.o fs/qnx4/dir.o fs/qnx4/namei.o fs/qnx4/bitmap.o 

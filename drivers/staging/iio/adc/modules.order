@@ -1,0 +1,7 @@
+kernel/drivers/staging/iio/adc/ad7606.ko
+kernel/drivers/staging/iio/adc/ad799x.ko
+kernel/drivers/staging/iio/adc/ad7291.ko
+kernel/drivers/staging/iio/adc/ad7780.ko
+kernel/drivers/staging/iio/adc/ad7816.ko
+kernel/drivers/staging/iio/adc/ad7192.ko
+kernel/drivers/staging/iio/adc/ad7280a.ko

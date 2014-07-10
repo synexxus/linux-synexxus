@@ -1,0 +1,1 @@
+cmd_drivers/net/wimax/i2400m/i2400m.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/net/wimax/i2400m/i2400m.ko drivers/net/wimax/i2400m/i2400m.o drivers/net/wimax/i2400m/i2400m.mod.o

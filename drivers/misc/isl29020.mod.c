@@ -1,0 +1,48 @@
+#include <linux/module.h>
+#include <linux/vermagic.h>
+#include <linux/compiler.h>
+
+MODULE_INFO(vermagic, VERMAGIC_STRING);
+
+__visible struct module __this_module
+__attribute__((section(".gnu.linkonce.this_module"))) = {
+	.name = KBUILD_MODNAME,
+	.init = init_module,
+#ifdef CONFIG_MODULE_UNLOAD
+	.exit = cleanup_module,
+#endif
+	.arch = MODULE_ARCH_INIT,
+};
+
+MODULE_INFO(intree, "Y");
+
+static const struct modversion_info ____versions[]
+__used
+__attribute__((section("__versions"))) = {
+	{ 0xe8d22f15, __VMLINUX_SYMBOL_STR(module_layout) },
+	{ 0xd4370660, __VMLINUX_SYMBOL_STR(i2c_del_driver) },
+	{ 0x2e01cd89, __VMLINUX_SYMBOL_STR(i2c_register_driver) },
+	{ 0x46b4b4bf, __VMLINUX_SYMBOL_STR(dev_err) },
+	{ 0x7662a76, __VMLINUX_SYMBOL_STR(pm_runtime_enable) },
+	{ 0x6dc71b43, __VMLINUX_SYMBOL_STR(_dev_info) },
+	{ 0xe5dc0d99, __VMLINUX_SYMBOL_STR(sysfs_create_group) },
+	{ 0x996bdb64, __VMLINUX_SYMBOL_STR(_kstrtoul) },
+	{ 0x4bfb7c00, __VMLINUX_SYMBOL_STR(__pm_runtime_idle) },
+	{ 0x6f9a27f5, __VMLINUX_SYMBOL_STR(mutex_unlock) },
+	{ 0x10da615, __VMLINUX_SYMBOL_STR(mutex_lock) },
+	{ 0xf9a482f9, __VMLINUX_SYMBOL_STR(msleep) },
+	{ 0x98bf483, __VMLINUX_SYMBOL_STR(__pm_runtime_resume) },
+	{ 0x91715312, __VMLINUX_SYMBOL_STR(sprintf) },
+	{ 0xc82da105, __VMLINUX_SYMBOL_STR(sysfs_remove_group) },
+	{ 0x2e5810c6, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr1) },
+	{ 0xefd6cf06, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr0) },
+	{ 0x78885352, __VMLINUX_SYMBOL_STR(i2c_smbus_write_byte_data) },
+	{ 0xd9b2657, __VMLINUX_SYMBOL_STR(i2c_smbus_read_byte_data) },
+};
+
+static const char __module_depends[]
+__used
+__attribute__((section(".modinfo"))) =
+"depends=";
+
+MODULE_ALIAS("i2c:isl29020");

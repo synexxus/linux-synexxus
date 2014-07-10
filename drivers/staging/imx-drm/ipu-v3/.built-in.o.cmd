@@ -1,0 +1,1 @@
+cmd_drivers/staging/imx-drm/ipu-v3/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/staging/imx-drm/ipu-v3/built-in.o drivers/staging/imx-drm/ipu-v3/imx-ipu-v3.o 

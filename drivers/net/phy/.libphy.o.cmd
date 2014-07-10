@@ -1,0 +1,1 @@
+cmd_drivers/net/phy/libphy.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/phy/libphy.o drivers/net/phy/phy.o drivers/net/phy/phy_device.o drivers/net/phy/mdio_bus.o 

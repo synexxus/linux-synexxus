@@ -1,0 +1,1 @@
+cmd_drivers/misc/lis3lv02d/lis3lv02d.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/misc/lis3lv02d/lis3lv02d.ko drivers/misc/lis3lv02d/lis3lv02d.o drivers/misc/lis3lv02d/lis3lv02d.mod.o

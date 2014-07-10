@@ -1,0 +1,1 @@
+cmd_drivers/usb/image/microtek.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/usb/image/microtek.ko drivers/usb/image/microtek.o drivers/usb/image/microtek.mod.o

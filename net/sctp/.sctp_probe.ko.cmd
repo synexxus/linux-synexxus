@@ -1,0 +1,1 @@
+cmd_net/sctp/sctp_probe.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o net/sctp/sctp_probe.ko net/sctp/sctp_probe.o net/sctp/sctp_probe.mod.o

@@ -1,0 +1,1 @@
+cmd_drivers/dma/ipu/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/dma/ipu/built-in.o drivers/dma/ipu/ipu_irq.o drivers/dma/ipu/ipu_idmac.o 

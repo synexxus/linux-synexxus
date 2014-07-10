@@ -1,0 +1,1 @@
+cmd_drivers/input/misc/yealink.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/misc/yealink.ko drivers/input/misc/yealink.o drivers/input/misc/yealink.mod.o

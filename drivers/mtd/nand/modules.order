@@ -1,0 +1,4 @@
+kernel/drivers/mtd/nand/nandsim.ko
+kernel/drivers/mtd/nand/omap2.ko
+kernel/drivers/mtd/nand/mxc_nand.ko
+kernel/drivers/mtd/nand/gpmi-nand/gpmi_nand.ko

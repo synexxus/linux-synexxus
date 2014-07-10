@@ -1,0 +1,1 @@
+cmd_sound/soc/codecs/snd-soc-twl6040.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/soc/codecs/snd-soc-twl6040.ko sound/soc/codecs/snd-soc-twl6040.o sound/soc/codecs/snd-soc-twl6040.mod.o

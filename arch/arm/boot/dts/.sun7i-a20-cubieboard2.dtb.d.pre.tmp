@@ -1,0 +1,1 @@
+sun7i-a20-cubieboard2.o: arch/arm/boot/dts/sun7i-a20-cubieboard2.dts

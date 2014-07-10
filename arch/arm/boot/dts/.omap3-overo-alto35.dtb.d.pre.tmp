@@ -1,0 +1,11 @@
+omap3-overo-alto35.o: arch/arm/boot/dts/omap3-overo-alto35.dts \
+ arch/arm/boot/dts/omap3-overo.dtsi arch/arm/boot/dts/omap34xx.dtsi \
+ arch/arm/boot/dts/omap3.dtsi \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/gpio/gpio.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/interrupt-controller/irq.h \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/pinctrl/omap.h \
+ arch/arm/boot/dts/skeleton.dtsi arch/arm/boot/dts/omap3-overo-base.dtsi \
+ arch/arm/boot/dts/twl4030.dtsi arch/arm/boot/dts/twl4030_omap3.dtsi \
+ arch/arm/boot/dts/omap3-overo-alto35-common.dtsi \
+ arch/arm/boot/dts/omap3-overo-common-peripherals.dtsi \
+ /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/arch/arm/boot/dts/include/dt-bindings/input/input.h

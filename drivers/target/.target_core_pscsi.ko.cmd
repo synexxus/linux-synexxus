@@ -1,0 +1,1 @@
+cmd_drivers/target/target_core_pscsi.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/target/target_core_pscsi.ko drivers/target/target_core_pscsi.o drivers/target/target_core_pscsi.mod.o

@@ -1,0 +1,1 @@
+cmd_drivers/net/wireless/ath/ath6kl/ath6kl_sdio.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/wireless/ath/ath6kl/ath6kl_sdio.o drivers/net/wireless/ath/ath6kl/sdio.o 

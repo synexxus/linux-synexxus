@@ -1,0 +1,6 @@
+kernel/drivers/watchdog/omap_wdt.ko
+kernel/drivers/watchdog/twl4030_wdt.ko
+kernel/drivers/watchdog/sunxi_wdt.ko
+kernel/drivers/watchdog/imx2_wdt.ko
+kernel/drivers/watchdog/tegra_wdt.ko
+kernel/drivers/watchdog/da9052_wdt.ko

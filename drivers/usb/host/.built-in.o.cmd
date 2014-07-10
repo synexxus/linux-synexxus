@@ -1,0 +1,1 @@
+cmd_drivers/usb/host/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/usb/host/built-in.o drivers/usb/host/ehci-hcd.o drivers/usb/host/ehci-platform.o drivers/usb/host/ehci-omap.o drivers/usb/host/ehci-tegra.o drivers/usb/host/xhci-hcd.o 

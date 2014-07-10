@@ -1,0 +1,1 @@
+cmd_drivers/input/joystick/a3d.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/input/joystick/a3d.ko drivers/input/joystick/a3d.o drivers/input/joystick/a3d.mod.o

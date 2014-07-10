@@ -1,0 +1,1 @@
+cmd_drivers/power/da9052-battery.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/power/da9052-battery.ko drivers/power/da9052-battery.o drivers/power/da9052-battery.mod.o

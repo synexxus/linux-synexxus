@@ -1,0 +1,1 @@
+sun6i-a31-colombus.o: arch/arm/boot/dts/sun6i-a31-colombus.dts

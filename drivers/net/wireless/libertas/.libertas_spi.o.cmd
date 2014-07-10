@@ -1,0 +1,1 @@
+cmd_drivers/net/wireless/libertas/libertas_spi.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/wireless/libertas/libertas_spi.o drivers/net/wireless/libertas/if_spi.o 

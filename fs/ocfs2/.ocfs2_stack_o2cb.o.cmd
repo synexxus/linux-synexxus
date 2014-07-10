@@ -1,0 +1,1 @@
+cmd_fs/ocfs2/ocfs2_stack_o2cb.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/ocfs2/ocfs2_stack_o2cb.o fs/ocfs2/stack_o2cb.o 

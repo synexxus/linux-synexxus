@@ -1,0 +1,2 @@
+sun5i-a10s-olinuxino-micro.o: \
+ arch/arm/boot/dts/sun5i-a10s-olinuxino-micro.dts

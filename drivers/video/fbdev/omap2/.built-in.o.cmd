@@ -1,0 +1,1 @@
+cmd_drivers/video/fbdev/omap2/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/video/fbdev/omap2/built-in.o drivers/video/fbdev/omap2/vrfb.o drivers/video/fbdev/omap2/dss/built-in.o drivers/video/fbdev/omap2/displays-new/built-in.o 

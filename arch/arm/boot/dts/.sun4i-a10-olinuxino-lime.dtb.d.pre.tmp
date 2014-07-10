@@ -1,0 +1,2 @@
+sun4i-a10-olinuxino-lime.o: \
+ arch/arm/boot/dts/sun4i-a10-olinuxino-lime.dts

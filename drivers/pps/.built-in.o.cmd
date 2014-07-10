@@ -1,0 +1,1 @@
+cmd_drivers/pps/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/pps/built-in.o drivers/pps/pps_core.o drivers/pps/clients/built-in.o drivers/pps/generators/built-in.o 

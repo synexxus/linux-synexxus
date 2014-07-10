@@ -1,0 +1,2 @@
+kernel/drivers/char/hw_random/virtio-rng.ko
+kernel/drivers/char/virtio_console.ko

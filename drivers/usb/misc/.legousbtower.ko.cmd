@@ -1,0 +1,1 @@
+cmd_drivers/usb/misc/legousbtower.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/usb/misc/legousbtower.ko drivers/usb/misc/legousbtower.o drivers/usb/misc/legousbtower.mod.o

@@ -1,0 +1,1 @@
+cmd_sound/pci/echoaudio/built-in.o :=  rm -f sound/pci/echoaudio/built-in.o; /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ar rcsD sound/pci/echoaudio/built-in.o

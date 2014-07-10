@@ -1,0 +1,1 @@
+cmd_net/appletalk/appletalk.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/appletalk/appletalk.o net/appletalk/aarp.o net/appletalk/ddp.o net/appletalk/dev.o net/appletalk/atalk_proc.o net/appletalk/sysctl_net_atalk.o 

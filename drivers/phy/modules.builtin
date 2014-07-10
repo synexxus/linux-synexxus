@@ -1,0 +1,5 @@
+kernel/drivers/phy/phy-omap-control.ko
+kernel/drivers/phy/phy-omap-usb2.ko
+kernel/drivers/phy/phy-ti-pipe3.ko
+kernel/drivers/phy/phy-twl4030-usb.ko
+kernel/drivers/phy/phy-sun4i-usb.ko

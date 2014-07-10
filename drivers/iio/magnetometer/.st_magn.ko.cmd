@@ -1,0 +1,1 @@
+cmd_drivers/iio/magnetometer/st_magn.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/iio/magnetometer/st_magn.ko drivers/iio/magnetometer/st_magn.o drivers/iio/magnetometer/st_magn.mod.o

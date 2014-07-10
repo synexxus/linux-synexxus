@@ -1,0 +1,1 @@
+cmd_sound/core/seq/snd-seq-device.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o sound/core/seq/snd-seq-device.o sound/core/seq/seq_device.o 

@@ -1,0 +1,8 @@
+kernel/sound/soc/omap/snd-soc-omap.ko
+kernel/sound/soc/omap/snd-soc-omap-dmic.ko
+kernel/sound/soc/omap/snd-soc-omap-mcbsp.ko
+kernel/sound/soc/omap/snd-soc-omap-mcpdm.ko
+kernel/sound/soc/omap/snd-soc-omap-hdmi.ko
+kernel/sound/soc/omap/snd-soc-omap-abe-twl6040.ko
+kernel/sound/soc/omap/snd-soc-omap-twl4030.ko
+kernel/sound/soc/omap/snd-soc-omap-hdmi-card.ko

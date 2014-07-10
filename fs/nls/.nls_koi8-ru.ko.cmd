@@ -1,0 +1,1 @@
+cmd_fs/nls/nls_koi8-ru.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o fs/nls/nls_koi8-ru.ko fs/nls/nls_koi8-ru.o fs/nls/nls_koi8-ru.mod.o

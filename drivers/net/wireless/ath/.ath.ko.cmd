@@ -1,0 +1,1 @@
+cmd_drivers/net/wireless/ath/ath.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/net/wireless/ath/ath.ko drivers/net/wireless/ath/ath.o drivers/net/wireless/ath/ath.mod.o

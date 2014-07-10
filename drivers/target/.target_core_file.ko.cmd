@@ -1,0 +1,1 @@
+cmd_drivers/target/target_core_file.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/target/target_core_file.ko drivers/target/target_core_file.o drivers/target/target_core_file.mod.o

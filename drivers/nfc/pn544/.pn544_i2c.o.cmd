@@ -1,0 +1,1 @@
+cmd_drivers/nfc/pn544/pn544_i2c.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/nfc/pn544/pn544_i2c.o drivers/nfc/pn544/i2c.o 

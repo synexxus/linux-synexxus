@@ -1,0 +1,2 @@
+kernel/drivers/scsi/sr_mod.ko
+kernel/drivers/scsi/sg.ko

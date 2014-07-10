@@ -1,0 +1,1 @@
+cmd_drivers/crypto/omap-aes.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o drivers/crypto/omap-aes.ko drivers/crypto/omap-aes.o drivers/crypto/omap-aes.mod.o

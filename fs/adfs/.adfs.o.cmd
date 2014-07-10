@@ -1,0 +1,1 @@
+cmd_fs/adfs/adfs.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/adfs/adfs.o fs/adfs/dir.o fs/adfs/dir_f.o fs/adfs/dir_fplus.o fs/adfs/file.o fs/adfs/inode.o fs/adfs/map.o fs/adfs/super.o 

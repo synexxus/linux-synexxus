@@ -1,0 +1,1 @@
+cmd_net/ipv4/netfilter/nf_nat_ipv4.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/ipv4/netfilter/nf_nat_ipv4.o net/ipv4/netfilter/nf_nat_l3proto_ipv4.o net/ipv4/netfilter/nf_nat_proto_icmp.o 

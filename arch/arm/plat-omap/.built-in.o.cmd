@@ -1,0 +1,1 @@
+cmd_arch/arm/plat-omap/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o arch/arm/plat-omap/built-in.o arch/arm/plat-omap/sram.o arch/arm/plat-omap/dma.o arch/arm/plat-omap/counter_32k.o arch/arm/plat-omap/dmtimer.o arch/arm/plat-omap/i2c.o 

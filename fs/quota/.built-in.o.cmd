@@ -1,0 +1,1 @@
+cmd_fs/quota/built-in.o :=  /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o fs/quota/built-in.o fs/quota/dquot.o fs/quota/quota.o fs/quota/kqid.o fs/quota/netlink.o 

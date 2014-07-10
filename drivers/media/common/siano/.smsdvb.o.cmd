@@ -1,0 +1,1 @@
+cmd_drivers/media/common/siano/smsdvb.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/common/siano/smsdvb.o drivers/media/common/siano/smsdvb-main.o 

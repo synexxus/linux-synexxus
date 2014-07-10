@@ -1,0 +1,1 @@
+cmd_net/nfc/nfc.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/nfc/nfc.o net/nfc/core.o net/nfc/netlink.o net/nfc/af_nfc.o net/nfc/rawsock.o net/nfc/llcp_core.o net/nfc/llcp_commands.o net/nfc/llcp_sock.o 

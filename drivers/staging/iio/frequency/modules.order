@@ -1,0 +1,7 @@
+kernel/drivers/staging/iio/frequency/ad5930.ko
+kernel/drivers/staging/iio/frequency/ad9832.ko
+kernel/drivers/staging/iio/frequency/ad9834.ko
+kernel/drivers/staging/iio/frequency/ad9850.ko
+kernel/drivers/staging/iio/frequency/ad9852.ko
+kernel/drivers/staging/iio/frequency/ad9910.ko
+kernel/drivers/staging/iio/frequency/ad9951.ko

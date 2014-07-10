@@ -1,0 +1,1 @@
+cmd_drivers/remoteproc/remoteproc.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/remoteproc/remoteproc.o drivers/remoteproc/remoteproc_core.o drivers/remoteproc/remoteproc_debugfs.o drivers/remoteproc/remoteproc_virtio.o drivers/remoteproc/remoteproc_elf_loader.o 

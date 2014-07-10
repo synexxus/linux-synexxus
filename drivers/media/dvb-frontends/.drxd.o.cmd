@@ -1,0 +1,1 @@
+cmd_drivers/media/dvb-frontends/drxd.o := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/dvb-frontends/drxd.o drivers/media/dvb-frontends/drxd_firm.o drivers/media/dvb-frontends/drxd_hard.o 

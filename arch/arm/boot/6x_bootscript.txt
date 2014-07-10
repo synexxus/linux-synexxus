@@ -1,0 +1,8 @@
+echo "6x_bootscript -> uEnv.txt wrapper..."
+if test -n $disk; then
+setenv mmcdev $disk
+setenv mmcpart 1
+fi
+load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt
+env import -t ${loadaddr} ${filesize}
+run uenvcmd

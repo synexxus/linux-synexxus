@@ -1,0 +1,1 @@
+cmd_sound/drivers/snd-aloop.ko := /home/jtreep/LINUX/gitc/armv7-multiplatform/dl/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jtreep/LINUX/gitc/armv7-multiplatform/KERNEL/scripts/module-common.lds --build-id  -o sound/drivers/snd-aloop.ko sound/drivers/snd-aloop.o sound/drivers/snd-aloop.mod.o

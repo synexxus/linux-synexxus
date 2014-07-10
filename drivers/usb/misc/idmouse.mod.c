@@ -1,0 +1,55 @@
+#include <linux/module.h>
+#include <linux/vermagic.h>
+#include <linux/compiler.h>
+
+MODULE_INFO(vermagic, VERMAGIC_STRING);
+
+__visible struct module __this_module
+__attribute__((section(".gnu.linkonce.this_module"))) = {
+	.name = KBUILD_MODNAME,
+	.init = init_module,
+#ifdef CONFIG_MODULE_UNLOAD
+	.exit = cleanup_module,
+#endif
+	.arch = MODULE_ARCH_INIT,
+};
+
+MODULE_INFO(intree, "Y");
+
+static const struct modversion_info ____versions[]
+__used
+__attribute__((section("__versions"))) = {
+	{ 0xe8d22f15, __VMLINUX_SYMBOL_STR(module_layout) },
+	{ 0xf251d048, __VMLINUX_SYMBOL_STR(default_llseek) },
+	{ 0xe495880d, __VMLINUX_SYMBOL_STR(usb_deregister) },
+	{ 0xe67f1a0, __VMLINUX_SYMBOL_STR(usb_register_driver) },
+	{ 0x37a39e57, __VMLINUX_SYMBOL_STR(usb_register_dev) },
+	{ 0x86a4889a, __VMLINUX_SYMBOL_STR(kmalloc_order_trace) },
+	{ 0x46b4b4bf, __VMLINUX_SYMBOL_STR(dev_err) },
+	{ 0xb840f323, __VMLINUX_SYMBOL_STR(__mutex_init) },
+	{ 0x47f03165, __VMLINUX_SYMBOL_STR(kmem_cache_alloc_trace) },
+	{ 0x79222a5, __VMLINUX_SYMBOL_STR(kmalloc_caches) },
+	{ 0x6dc71b43, __VMLINUX_SYMBOL_STR(_dev_info) },
+	{ 0x3a657fb3, __VMLINUX_SYMBOL_STR(dev_set_drvdata) },
+	{ 0x484b3086, __VMLINUX_SYMBOL_STR(usb_deregister_dev) },
+	{ 0x37a0cba, __VMLINUX_SYMBOL_STR(kfree) },
+	{ 0x7c74d300, __VMLINUX_SYMBOL_STR(__dynamic_dev_dbg) },
+	{ 0xb14a4ad0, __VMLINUX_SYMBOL_STR(usb_autopm_put_interface) },
+	{ 0xc1a2c3b5, __VMLINUX_SYMBOL_STR(usb_bulk_msg) },
+	{ 0xdad8ec5d, __VMLINUX_SYMBOL_STR(usb_control_msg) },
+	{ 0x2cbe6b6e, __VMLINUX_SYMBOL_STR(usb_autopm_get_interface) },
+	{ 0x43c003ff, __VMLINUX_SYMBOL_STR(dev_get_drvdata) },
+	{ 0x7ad5145, __VMLINUX_SYMBOL_STR(usb_find_interface) },
+	{ 0x6f9a27f5, __VMLINUX_SYMBOL_STR(mutex_unlock) },
+	{ 0x528c709d, __VMLINUX_SYMBOL_STR(simple_read_from_buffer) },
+	{ 0x10da615, __VMLINUX_SYMBOL_STR(mutex_lock) },
+	{ 0xefd6cf06, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr0) },
+};
+
+static const char __module_depends[]
+__used
+__attribute__((section(".modinfo"))) =
+"depends=";
+
+MODULE_ALIAS("usb:v0681p0005d*dc*dsc*dp*ic*isc*ip*in*");
+MODULE_ALIAS("usb:v0681p0010d*dc*dsc*dp*ic*isc*ip*in*");
