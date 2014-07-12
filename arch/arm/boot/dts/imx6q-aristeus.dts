@@ -15,7 +15,7 @@
 
 #include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6q.dtsi"
-#include "imx6qdl-aristes.dtsi"
+#include "imx6qdl-aristeus.dtsi"
 
 / {
     model = "Freescale i.MX6 Quad Aristeus Board";
