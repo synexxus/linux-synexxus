@@ -348,13 +348,13 @@ else
 
     #address-cells = <0>;
     #size-cells = <1>;
-    if 0
+    #if 0
     phy_int {
         reg = <0x6>;
         interrupt-parent = <&gpio1>;
         interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
     };
-    endif
+    #endif
 };
 
 &flexcan1 {
