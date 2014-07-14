@@ -894,7 +894,7 @@ MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x1b0b0 /* CD */
 };
 
 &pcie {
-reset-gpio = <&gpio7 12 0>;
+reset-gpio = <&gpio2 15 0>;	/* UPDATE: 07/14/2014 */
     status = "okay";
 };
 
@@ -958,7 +958,7 @@ reset-gpio = <&gpio7 12 0>;
     bus-width = <4>;
     non-removable;
     vmmc-supply = <&reg_3p3v>;
-    vqmmc-supply = <&wilink_wl_en>;
+    /*vqmmc-supply = <&wilink_wl_en>;*/
     ocr-limit = <0x80>; /* 1.65v - 1.95v */
     power-off-card;
     keep-power-in-suspend;
