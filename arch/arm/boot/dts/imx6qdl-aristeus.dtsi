@@ -290,7 +290,7 @@
 
 &audmux {
     pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_audmux_5>;
+    pinctrl-0 = <&pinctrl_audmux_3>;
     status = "okay";
 };
 
@@ -958,7 +958,7 @@ reset-gpio = <&gpio7 12 0>;
     bus-width = <4>;
     non-removable;
     vmmc-supply = <&reg_3p3v>;
-    vqmmc-supply = <&wilink_wl_en>;
+    /*vqmmc-supply = <&wilink_wl_en>;*/
     ocr-limit = <0x80>; /* 1.65v - 1.95v */
     power-off-card;
     keep-power-in-suspend;
