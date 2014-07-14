@@ -861,7 +861,7 @@ MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x1b0b0 /* CD */
 >;
 };
 };
-    };
+    
 };
 
 &ldb {
