@@ -273,7 +273,7 @@
     wlan_bt_rfkill {
         compatible = "net,rfkill-gpio";
         name = "wlan_bt_rfkill";
-        type = <2>; /* bluetooth */
+        type = <2>; // bluetooth 
         gpios = <&gpio6 16 0>;
     };
 */
@@ -672,13 +672,13 @@ regulator-always-on;
 
         /*
         pinctrl_ov5640: pinctrl_ov5640 {
-            /* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
-        };
+             parallel camera on CSI1, pins differ for iMX6Q/iMX6DL 
+        };*/
 
-        pinctrl_ov5640_gpios: pinctrl_ov5640_gpios {
+  /*      pinctrl_ov5640_gpios: pinctrl_ov5640_gpios {
             fsl,pins = <
-                MX6QDL_PAD_EIM_DA13__GPIO3_IO13 0x0b0b0 /* Power */
-                MX6QDL_PAD_EIM_DA14__GPIO3_IO14 0x030b0 /* Reset */
+                MX6QDL_PAD_EIM_DA13__GPIO3_IO13 0x0b0b0 /* Power 
+                MX6QDL_PAD_EIM_DA14__GPIO3_IO14 0x030b0 /* Reset 
             >;
         };
         */
