@@ -290,7 +290,7 @@
 
 &audmux {
     pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_audmux_5>;
+    pinctrl-0 = <&pinctrl_audmux_3>;	//Must be audmux 3, 07/15/2014
     status = "okay";
 };
 
