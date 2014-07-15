@@ -135,6 +135,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-sabreauto-gpmi-weim.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-aristeus.dtb \
+	imx6qdl-aristeus.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-hdcp.dtb \
 	imx6q-sabresd-ldo.dtb \
