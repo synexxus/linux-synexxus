@@ -273,7 +273,7 @@
     wlan_bt_rfkill {
         compatible = "net,rfkill-gpio";
         name = "wlan_bt_rfkill";
-        type = <2>;     /* bluetooth */
+        type = <2>;     // bluetooth 
         gpios = <&gpio6 16 0>;
     };
 */
@@ -290,7 +290,7 @@
 
 &audmux {
     pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_audmux_5>;
+    pinctrl-0 = <&pinctrl_audmux_3>;	//Must be audmux 3, 07/15/2014
     status = "okay";
 };
 
@@ -672,13 +672,13 @@ regulator-always-on;
 
         /*
         pinctrl_ov5640: pinctrl_ov5640 {
-            /* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+            // parallel camera on CSI1, pins differ for iMX6Q/iMX6DL 
         };
 
         pinctrl_ov5640_gpios: pinctrl_ov5640_gpios {
             fsl,pins = <
-                MX6QDL_PAD_EIM_DA13__GPIO3_IO13     0x0b0b0     /* Power */
-                MX6QDL_PAD_EIM_DA14__GPIO3_IO14     0x030b0     /* Reset */
+                MX6QDL_PAD_EIM_DA13__GPIO3_IO13     0x0b0b0     // Power 
+                MX6QDL_PAD_EIM_DA14__GPIO3_IO14     0x030b0     // Reset 
             >;
         };
         */
@@ -894,7 +894,7 @@ MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x1b0b0 /* CD */
 };
 
 &pcie {
-	reset-gpio = <&gpio7 12 0>;
+	reset-gpio = <&gpio2 15 0>;
     status = "okay";
 };
 
@@ -958,7 +958,7 @@ MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x1b0b0 /* CD */
     bus-width = <4>;
     non-removable;
     vmmc-supply = <&reg_3p3v>;
-    vqmmc-supply = <&wilink_wl_en>;
+    /*vqmmc-supply = <&wilink_wl_en>;*/
     ocr-limit = <0x80>;     /* 1.65v - 1.95v */
     power-off-card;
     keep-power-in-suspend;
