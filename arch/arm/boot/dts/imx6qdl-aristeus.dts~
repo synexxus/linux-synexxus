@@ -38,10 +38,10 @@
 	    status = "okay";
 	};
 
-/*
- * ecspi2 does not exist in the imx6qdl.dtsi!
- * Added by J.Reep on 07/16/2014
- */
+	/*
+	 * ecspi2 does not exist in the imx6qdl.dtsi!
+	 * Added by J.Reep on 07/16/2014
+	 */
 	ecspi2 {
 			pinctrl_ecspi2_cs_0: ecspi2_cs_grp-0 {
 				fsl,pins = <

@@ -35,11 +35,12 @@
 		};
 	};
 
+/*
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
-
+*/
 		/*
 		* Aristeus actually uses the PF0100 PMU
 		*/
@@ -967,11 +968,11 @@
     status = "okay";
 };
 
-&usdhc2 {   /* uSDHC2, TiWi wl1271 */
+&usdhc2 { 
     pinctrl-names = "default";
     pinctrl-0 = <&pinctrl_usdhc2_2>;
-    cd-gpios = <&gpio1 4 0>
-    vmmc-supply = <&reg_3p3v>;
+    cd-gpios = <&gpio1 4 0>;
+    vmmc-supply = <&sw2_reg>;
     status = "okay";
 };
 
@@ -979,7 +980,7 @@
     pinctrl-names = "default";
     pinctrl-0 = <&pinctrl_usdhc3_2>;
     cd-gpios = <&gpio7 0 0>;
-    vmmc-supply = <&reg_3p3v>;
+    vmmc-supply = <&sw2_reg>;
     status = "okay";
 };
 
@@ -987,6 +988,6 @@
     pinctrl-names = "default";
     pinctrl-0 = <&pinctrl_usdhc4_2>;
     cd-gpios = <&gpio2 6 0>;
-    vmmc-supply = <&reg_3p3v>;
+    vmmc-supply = <&sw2_reg>;
     status = "okay";
 };
