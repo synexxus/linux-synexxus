@@ -17,65 +17,91 @@
 #include "imx6q.dtsi"
 #include "imx6qdl-aristeus.dtsi"
 
-/ {
-    model = "Freescale i.MX6 Quad Aristeus Board";
-    compatible = "fsl,imx6q-aristeus", "fsl,imx6q";
-};
+	/ {
+	    model = "Freescale i.MX6 Quad Aristeus Board";
+	    compatible = "fsl,imx6q-aristeus", "fsl,imx6q";
+	};
 
-&mxcfb1 {
-    status = "okay";
-};
+	&mxcfb1 {
+	    status = "okay";
+	};
 
-&mxcfb2 {
-    status = "okay";
-};
+	&mxcfb2 {
+	    status = "okay";
+	};
 
-&mxcfb3 {
-    status = "okay";
-};
+	&mxcfb3 {
+	    status = "okay";
+	};
 
-&mxcfb4 {
-    status = "okay";
-};
+	&mxcfb4 {
+	    status = "okay";
+	};
 
-/*
-&ov5640 {
-    ipu_id = <1>;
-};
+	/*
+	 * ecspi2 does not exist in the imx6qdl.dtsi!
+	 * Added by J.Reep on 07/16/2014
+	 */
+	ecspi2 {
+			pinctrl_ecspi2_cs_0: ecspi2_cs_grp-0 {
+				fsl,pins = <
+					MX6QDL_PAD_EIM_RW__GPIO2_IO26 0x80000000
+				>;
+			};
 
-&ov5640_mipi {
-       csi_id = <1>;
-       ipu_id = <1>;
-};
-*/
+			pinctrl_ecspi2_cs_1: ecspi2_cs_grp-1 {
+				fsl,pins = <
+					MX6QDL_PAD_EIM_LBA__GPIO2_IO27 0x80000000
+				>;
+			};
 
-/*
-&pinctrl_ov5640 { // parallel camera 
-    fsl,pins = <
-        MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12    0xb0b1
-        MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13    0xb0b1
-        MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14    0xb0b1
-        MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15    0xb0b1
-        MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16    0xb0b1
-        MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17    0xb0b1
-        MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18    0xb0b1
-        MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19    0xb0b1
-        MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN  0xb0b1
-        MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK    0xb0b1
-        MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC    0xb0b1
-        MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC    0xb0b1
-    >;
-};
-*/
+			pinctrl_ecspi2_1: ecspi2grp-1 {
+				fsl,pins = <
+					MX6QDL_PAD_EIM_OE__ECSPI2_MISO 0x100b1
+					MX6QDL_PAD_EIM_CS1__ECSPI2_MOSI 0x100b1
+					MX6QDL_PAD_EIM_CS0__ECSPI2_SCLK 0x100b1
+				>;
+			};
+		};
 
-&sata {
-    status = "okay";
-};
+	/*
+		&ov5640 {
+		    ipu_id = <1>;
+		};
 
-&v4l2_cap_2 {
-    compatible = "fsl,imx6q-v4l2-capture";
-    ipu_id = <1>;
-    csi_id = <1>;
-    mclk_source = <0>;
-    status = "okay";
-};
+		&ov5640_mipi {
+		       csi_id = <1>;
+		       ipu_id = <1>;
+		};
+	*/
+
+	/*
+		&pinctrl_ov5640 { // parallel camera 
+		    fsl,pins = <
+			MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12    0xb0b1
+			MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13    0xb0b1
+			MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14    0xb0b1
+			MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15    0xb0b1
+			MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16    0xb0b1
+			MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17    0xb0b1
+			MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18    0xb0b1
+			MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19    0xb0b1
+			MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN  0xb0b1
+			MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK    0xb0b1
+			MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC    0xb0b1
+			MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC    0xb0b1
+		    >;
+		};
+	*/
+
+	&sata {
+	    status = "okay";
+	};
+
+	&v4l2_cap_2 {
+	    compatible = "fsl,imx6q-v4l2-capture";
+	    ipu_id = <1>;
+	    csi_id = <1>;
+	    mclk_source = <0>;
+	    status = "okay";
+	};
