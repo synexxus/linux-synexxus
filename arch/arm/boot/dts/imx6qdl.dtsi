@@ -1214,7 +1214,6 @@
 				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL 0x1b0b0
 			>;
 		};
-
 	};
 
 	esai {
