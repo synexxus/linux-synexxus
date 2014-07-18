@@ -1,6 +1,7 @@
 #
 # Automatically generated file; DO NOT EDIT.
 # Linux/arm 3.10.17 Kernel Configuration
+#   Updated with CONFIG_AEABI
 #
 CONFIG_ARM=y
 CONFIG_MIGHT_HAVE_PCI=y
@@ -515,6 +516,7 @@ CONFIG_HZ=100
 CONFIG_SCHED_HRTICK=y
 # CONFIG_THUMB2_KERNEL is not set
 # CONFIG_AEABI is not set
+CONFIG_AEABI=y
 # CONFIG_ARCH_SPARSEMEM_DEFAULT is not set
 # CONFIG_ARCH_SELECT_MEMORY_MODEL is not set
 CONFIG_HAVE_ARCH_PFN_VALID=y
