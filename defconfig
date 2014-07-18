@@ -1,7 +1,7 @@
 #
 # Automatically generated file; DO NOT EDIT.
 # Linux/arm 3.10.17 Kernel Configuration
-#   Updated with CONFIG_AEABI Updated further
+#   Updated with CONFIG_AEABI Updated further and further 4:57PM
 #
 CONFIG_ARM=y
 CONFIG_MIGHT_HAVE_PCI=y
@@ -4952,6 +4952,7 @@ CONFIG_MX6_VPU_352M=y
 # MXC HDMI CEC (Consumer Electronics Control) support
 #
 CONFIG_MXC_HDMI_CEC=y
+CONFIG_SND_SOC_IMX_HDMI=y
 
 #
 # MXC MIPI Support
