@@ -1,7 +1,7 @@
 #
 # Automatically generated file; DO NOT EDIT.
 # Linux/arm 3.10.17 Kernel Configuration
-#   Updated with CONFIG_AEABI Updated further
+#   Updated with CONFIG_AEABI Updated further and further 4:57PM
 #
 CONFIG_ARM=y
 CONFIG_MIGHT_HAVE_PCI=y
@@ -28,7 +28,7 @@ CONFIG_BUILDTIME_EXTABLE_SORT=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 CONFIG_CROSS_COMPILE=""
-CONFIG_LOCALVERSION=""
+CONFIG_LOCALVERSION="v1.0.0ga+synexxus"
 CONFIG_LOCALVERSION_AUTO=y
 CONFIG_HAVE_KERNEL_GZIP=y
 CONFIG_HAVE_KERNEL_LZMA=y
