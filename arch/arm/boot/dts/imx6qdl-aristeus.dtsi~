@@ -349,7 +349,7 @@
 
 &fec {
     pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_enet_1>;         /* original had _4 */
+    pinctrl-0 = <&pinctrl_enet_4>;         /* original had _4 */
     phy-mode = "rgmii";
 #if 0
     phy-reset-gpios = <&gpio1 27 0>;

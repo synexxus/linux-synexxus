@@ -299,7 +299,7 @@
 
 	&audmux {
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_audmux_3>;	//Must be audmux 3, 07/15/2014
+		pinctrl-0 = <&pinctrl_audmux_4>;	//Must be audmux 4 (added 4 to imx6qdl.dtsi on 07/25/201, 07/15/2014
 		status = "okay";
 	};
 
