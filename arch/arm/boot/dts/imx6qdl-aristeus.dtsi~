@@ -940,9 +940,9 @@ Exists in imx6qdl.dtsi
 
 &pcie {
 //EIM_A25 is connected to power system for PCIe Switch
-    // power-on-gpio = <&gpio5 2 0>;  // Removed Power also.  The power-on-gpio may be causing a DTB boot hang as this was the only thing added/changed previously.
+	power-on-gpio = <&gpio5 2 0>;
 	reset-gpio = <&gpio2 15 0>;
-    status = "okay";				// Removed status = "okay" line
+    //status = "okay";				// Removed status = "okay" line
 };
 
 &pwm1 {
