@@ -657,6 +657,7 @@
 					/* Volume Down Button */
 					MX6QDL_PAD_EIM_A25__GPIO5_IO02 		0x80000000
 					MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0
+					MX6QDL_PAD_EIM_A25__GPIO5_IO02	    0x80000000
 					MX6QDL_PAD_EIM_D19__GPIO3_IO19      0x80000000  /* spi-nor CS */
 					MX6QDL_PAD_EIM_D22__GPIO3_IO22      0x80000000  /* otg power en */
 					MX6QDL_PAD_ENET_RXD0__GPIO1_IO27    0x000b0     /* ethernet phy reset */
@@ -697,9 +698,9 @@
 			};
 			*/
 
-			/* Using audmux5*/
+			/* Using a2udmux5*/
 /*
-			pinctrl_audmux: audmuxgrp {
+			pinctrl_au2dmux: audm2uxgrp {
 				fsl,pins = <
 				MX6QDL_PAD_KEY_ROW1__AUD5_RXD 0x130b0
 				MX6QDL_PAD_KEY_COL0__AUD5_TXC 0x130b0
@@ -942,7 +943,7 @@ Exists in imx6qdl.dtsi
 //EIM_A25 is connected to power system for PCIe Switch
     // power-on-gpio = <&gpio5 2 0>;  // Removed Power also.  The power-on-gpio may be causing a DTB boot hang as this was the only thing added/changed previously.
 	reset-gpio = <&gpio2 15 0>;
-    status = "okay";				// Removed status = "okay" line
+    //status = "okay";				// Removed status = "okay" line
 };
 
 &pwm1 {
