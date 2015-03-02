@@ -1,1 +1,0 @@
-cmd_drivers/power/reset/built-in.o :=  /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/power/reset/built-in.o drivers/power/reset/gpio-poweroff.o drivers/power/reset/restart-poweroff.o 

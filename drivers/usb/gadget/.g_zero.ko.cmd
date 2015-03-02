@@ -1,1 +1,0 @@
-cmd_drivers/usb/gadget/g_zero.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o drivers/usb/gadget/g_zero.ko drivers/usb/gadget/g_zero.o drivers/usb/gadget/g_zero.mod.o

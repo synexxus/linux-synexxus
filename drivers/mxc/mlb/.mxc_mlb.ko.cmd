@@ -1,1 +1,0 @@
-cmd_drivers/mxc/mlb/mxc_mlb.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o drivers/mxc/mlb/mxc_mlb.ko drivers/mxc/mlb/mxc_mlb.o drivers/mxc/mlb/mxc_mlb.mod.o

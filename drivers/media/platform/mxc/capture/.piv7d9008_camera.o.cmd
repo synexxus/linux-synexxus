@@ -1,1 +1,0 @@
-cmd_drivers/media/platform/mxc/capture/piv7d9008_camera.o := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/media/platform/mxc/capture/piv7d9008_camera.o drivers/media/platform/mxc/capture/piv7d9008.o 

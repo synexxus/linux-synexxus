@@ -1,1 +1,0 @@
-cmd_drivers/net/wireless/ti/wl12xx/wl12xx.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o drivers/net/wireless/ti/wl12xx/wl12xx.ko drivers/net/wireless/ti/wl12xx/wl12xx.o drivers/net/wireless/ti/wl12xx/wl12xx.mod.o

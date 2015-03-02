@@ -1,1 +1,0 @@
-cmd_drivers/net/can/built-in.o :=  /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/can/built-in.o drivers/net/can/usb/built-in.o drivers/net/can/softing/built-in.o 

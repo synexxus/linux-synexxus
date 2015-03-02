@@ -1,1 +1,0 @@
-cmd_drivers/input/touchscreen/built-in.o :=  /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/input/touchscreen/built-in.o drivers/input/touchscreen/egalax_ts.o 

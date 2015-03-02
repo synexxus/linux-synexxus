@@ -1,4 +1,0 @@
-kernel/drivers/net/mii.ko
-kernel/drivers/net/ethernet/freescale/fec.ko
-kernel/drivers/net/phy/libphy.ko
-kernel/drivers/net/phy/micrel.ko

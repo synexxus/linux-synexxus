@@ -1,1 +1,0 @@
-cmd_drivers/net/wireless/ti/wlcore/wlcore_sdio.o := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/net/wireless/ti/wlcore/wlcore_sdio.o drivers/net/wireless/ti/wlcore/sdio.o 
