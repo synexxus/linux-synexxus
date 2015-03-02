@@ -150,6 +150,11 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 			| ESDHC_FLAG_BUSFREQ,
 };
 
+static struct esdhc_soc_data usdhc_imx6sx_data = {
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
+			| ESDHC_FLAG_HAVE_CAP1,
+};
+
 struct pltfm_imx_data {
 	u32 scratchpad;
 	struct pinctrl *pinctrl;
@@ -191,6 +196,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx35-esdhc", .data = &esdhc_imx35_data, },
 	{ .compatible = "fsl,imx51-esdhc", .data = &esdhc_imx51_data, },
 	{ .compatible = "fsl,imx53-esdhc", .data = &esdhc_imx53_data, },
+	{ .compatible = "fsl,imx6sx-usdhc", .data = &usdhc_imx6sx_data, },
 	{ .compatible = "fsl,imx6sl-usdhc", .data = &usdhc_imx6sl_data, },
 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
 	{ /* sentinel */ }
@@ -973,9 +979,6 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	else
 		boarddata->support_vsel = true;
 
-	if (of_find_property(np, "vqmmc-1-8-v", NULL))
-		boarddata->vqmmc_18v = true;
-
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
@@ -1176,12 +1179,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 	}
-	if (boarddata->vqmmc_18v)
-		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
-	if (host->mmc->pm_caps & MMC_PM_KEEP_POWER &&
-		host->mmc->pm_caps & MMC_PM_WAKE_SDIO_IRQ)
-		device_init_wakeup(&pdev->dev, 1);
+	device_set_wakeup_capable(&pdev->dev, 1);
 
 	err = sdhci_add_host(host);
 	if (err)

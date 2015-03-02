@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright 2012-2014 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Marek Vasut <marex@denx.de>
  * on behalf of DENX Software Engineering GmbH
  *
@@ -40,6 +40,7 @@
 
 #define BM_USBPHY_CTRL_SFTRST			BIT(31)
 #define BM_USBPHY_CTRL_CLKGATE			BIT(30)
+#define BM_USBPHY_CTRL_OTG_ID_VALUE		BIT(27)
 #define BM_USBPHY_CTRL_ENAUTOSET_USBCLKS	BIT(26)
 #define BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE	BIT(25)
 #define BM_USBPHY_CTRL_ENVBUSCHG_WKUP		BIT(23)
@@ -128,7 +129,13 @@ static const struct mxs_phy_data imx6sl_phy_data = {
 		MXS_PHY_HAS_ANATOP,
 };
 
+static const struct mxs_phy_data imx6sx_phy_data = {
+	.flags = MXS_PHY_HAS_ANATOP |
+		MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS,
+};
+
 static const struct of_device_id mxs_phy_dt_ids[] = {
+	{ .compatible = "fsl,imx6sx-usbphy", .data = &imx6sx_phy_data, },
 	{ .compatible = "fsl,imx6sl-usbphy", .data = &imx6sl_phy_data, },
 	{ .compatible = "fsl,imx6q-usbphy", .data = &imx6q_phy_data, },
 	{ .compatible = "fsl,imx23-usbphy", .data = &imx23_phy_data, },
@@ -248,6 +255,18 @@ static void __mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool disconnect)
 		usleep_range(500, 1000);
 }
 
+static bool mxs_phy_is_otg_host(struct mxs_phy *mxs_phy)
+{
+	void __iomem *base = mxs_phy->phy.io_priv;
+	u32 phyctrl = readl(base + HW_USBPHY_CTRL);
+
+	if (IS_ENABLED(CONFIG_USB_OTG) &&
+			!(phyctrl & BM_USBPHY_CTRL_OTG_ID_VALUE))
+		return true;
+
+	return false;
+}
+
 static void mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool on)
 {
 	bool vbus_is_on = false;
@@ -262,7 +281,7 @@ static void mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool on)
 
 	vbus_is_on = mxs_phy_get_vbus_status(mxs_phy);
 
-	if (on && !vbus_is_on)
+	if (on && !vbus_is_on && !mxs_phy_is_otg_host(mxs_phy))
 		__mxs_phy_disconnect_line(mxs_phy, true);
 	else
 		__mxs_phy_disconnect_line(mxs_phy, false);
@@ -297,7 +316,17 @@ static int mxs_phy_init(struct usb_phy *phy)
 static void mxs_phy_shutdown(struct usb_phy *phy)
 {
 	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+	u32 value = BM_USBPHY_CTRL_ENVBUSCHG_WKUP |
+			BM_USBPHY_CTRL_ENDPDMCHG_WKUP |
+			BM_USBPHY_CTRL_ENIDCHG_WKUP |
+			BM_USBPHY_CTRL_ENAUTOSET_USBCLKS |
+			BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE |
+			BM_USBPHY_CTRL_ENAUTOCLR_PHY_PWD |
+			BM_USBPHY_CTRL_ENAUTOCLR_CLKGATE |
+			BM_USBPHY_CTRL_ENAUTO_PWRON_PLL;
 
+	writel(value, phy->io_priv + HW_USBPHY_CTRL_CLR);
+	writel(0xffffffff, phy->io_priv + HW_USBPHY_PWD);
 	writel(BM_USBPHY_CTRL_CLKGATE,
 	       phy->io_priv + HW_USBPHY_CTRL_SET);
 

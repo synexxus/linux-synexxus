@@ -1,0 +1,1 @@
+cmd_net/can/can-gw.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o net/can/can-gw.ko net/can/can-gw.o net/can/can-gw.mod.o

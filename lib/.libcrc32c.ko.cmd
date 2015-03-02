@@ -1,0 +1,1 @@
+cmd_lib/libcrc32c.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o lib/libcrc32c.ko lib/libcrc32c.o lib/libcrc32c.mod.o

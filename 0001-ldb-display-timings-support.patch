@@ -1,0 +1,105 @@
+diff --git a/drivers/video/mxc/ldb.c b/drivers/video/mxc/ldb.c
+index 0fa426d..4e66692 100644
+--- a/drivers/video/mxc/ldb.c
++++ b/drivers/video/mxc/ldb.c
+@@ -33,6 +33,8 @@
+ #include <video/videomode.h>
+ #include "mxc_dispdrv.h"
+ 
++#include <video/of_display_timing.h>
++
+ #define DRIVER_NAME	"ldb"
+ 
+ #define LDB_BGREF_RMODE_INT		(0x1 << 15)
+@@ -293,8 +295,13 @@ static int ldb_init(struct mxc_dispdrv_handle *mddh,
+ 	struct fb_info *fbi = setting->fbi;
+ 	struct ldb_chan *chan;
+ 	struct fb_videomode fb_vm;
++	struct videomode vidmode;
+ 	int chno;
+ 
++	struct display_timings *dts;				// Lookup: <include/video/display_timing.h> for support
++	int ret;
++	int i,j=0;
++
+ 	chno = ldb->chan[ldb->primary_chno].is_used ?
+ 		!ldb->primary_chno : ldb->primary_chno;
+ 
+@@ -309,17 +316,70 @@ static int ldb_init(struct mxc_dispdrv_handle *mddh,
+ 		return -ENODEV;
+ 	}
+ 
+-	chan->is_used = true;
++	/* 
++     	 * Added 01/30/2015: 
++ 	 * 	This will return a structure of disp_timings
++	 *	that are written in the Device Tree 'display-timings' subnode
++	 */
++	printk(KERN_INFO "Parsing LBD Device-Timings\n");
++
++	dts = of_get_display_timings(dev->of_node);
++	if (!dts) {
++		dev_err(dev, "ldb: no display-timings found\n");
++		//return -EINVAL;
++		// if the Device timings is not present.  Continue as prebuilt
++		chan->is_used = true;
++
++		chan->fbi = fbi;
++
++		fb_videomode_from_videomode(&chan->vm, &fb_vm);
+ 
+-	chan->fbi = fbi;
++		INIT_LIST_HEAD(&fbi->modelist);
++		fb_add_videomode(&fb_vm, &fbi->modelist);
++		fb_videomode_to_var(&fbi->var, &fb_vm);
+ 
+-	fb_videomode_from_videomode(&chan->vm, &fb_vm);
++		setting->crtc = chan->crtc;
++	} else {
++		dev_err(dev, "ldb: yes display-timings found\n");
++		// if the Device timings is present.  Let's populate
++		chan->is_used = true;
++
++		chan->fbi = fbi;
++
++		INIT_LIST_HEAD(&fbi->modelist);
++		if(1) dev_err(dev, "\tldb: timings found = %u\n",dts->num_timings);
++		if(1) dev_err(dev, "\tldb: Native Mode found = %u\n",dts->native_mode);
++		for(i=0; i < dts->num_timings; i++){
++			if (i==dts->native_mode){
++				j=i;
++			} else {
++				ret = videomode_from_timings(dts, &vidmode, i);	//convert a display timing to video mode <include/video/videomode.h>
++
++				if(ret == -EINVAL){
++					dev_err(dev, "Error Retrieving ldb videomode_from_timings\n");
++				} else {
++					fb_videomode_from_videomode(&vidmode, &fb_vm);
++
++					fb_add_videomode(&fb_vm, &fbi->modelist);
++					fb_videomode_to_var(&fbi->var, &fb_vm);	
++				}
++			}		
++		}
+ 
+-	INIT_LIST_HEAD(&fbi->modelist);
+-	fb_add_videomode(&fb_vm, &fbi->modelist);
+-	fb_videomode_to_var(&fbi->var, &fb_vm);
++		/* Set the final mode in the list! */
++		ret = videomode_from_timings(dts, &vidmode, j);	//convert a display timing to video mode <include/video/videomode.h>
++
++		if(ret == -EINVAL){
++			dev_err(dev, "Error Retrieving ldb videomode_from_timings\n");
++		} else {
++			fb_videomode_from_videomode(&vidmode, &fb_vm);
+ 
+-	setting->crtc = chan->crtc;
++			fb_add_videomode(&fb_vm, &fbi->modelist);
++			fb_videomode_to_var(&fbi->var, &fb_vm);	
++		}
++
++		setting->crtc = chan->crtc;
++	}
+ 
+ 	return 0;
+ }

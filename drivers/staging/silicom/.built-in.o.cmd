@@ -1,0 +1,1 @@
+cmd_drivers/staging/silicom/built-in.o :=  rm -f drivers/staging/silicom/built-in.o; /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ar rcsD drivers/staging/silicom/built-in.o

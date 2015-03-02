@@ -17,6 +17,7 @@
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/otg-fsm.h>
 
 /******************************************************************************
  * DEFINE
@@ -78,6 +79,10 @@ struct ci_role_driver {
 	int		(*start)(struct ci_hdrc *);
 	void		(*stop)(struct ci_hdrc *);
 	irqreturn_t	(*irq)(struct ci_hdrc *);
+			/* Save before suspend */
+	void		(*save)(struct ci_hdrc *);
+			/* Restore after power lost */
+	void		(*restore)(struct ci_hdrc *);
 	const char	*name;
 };
 
@@ -110,8 +115,10 @@ struct hw_bank {
  * @roles: array of supported roles for this controller
  * @role: current role
  * @is_otg: if the device is otg-capable
- * @otg_task: the thread for handling otg task
- * @otg_wait: the otg event waitqueue head
+ * @fsm: otg finite state machine
+ * @fsm_timer: pointer to timer list of otg fsm
+ * @work: work for role changing
+ * @wq: workqueue thread
  * @qh_pool: allocation pool for queue heads
  * @td_pool: allocation pool for transfer descriptors
  * @gadget: device side representation for peripheral controller
@@ -149,8 +156,12 @@ struct ci_hdrc {
 	struct ci_role_driver		*roles[CI_ROLE_END];
 	enum ci_role			role;
 	bool				is_otg;
-	struct task_struct		*otg_task;
-	wait_queue_head_t		otg_wait;
+	struct otg_fsm			fsm;
+	struct ci_otg_fsm_timer_list	*fsm_timer;
+	struct timer_list		hnp_polling_timer;
+	bool				hnp_polling_req;
+	struct work_struct		work;
+	struct workqueue_struct		*wq;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
@@ -171,19 +182,29 @@ struct ci_hdrc {
 
 	struct ci_hdrc_platform_data	*platdata;
 	int				vbus_active;
-	/* FIXME: some day, we'll not use global phy */
-	bool				global_phy;
 	struct usb_phy			*transceiver;
 	struct usb_hcd			*hcd;
 	struct dentry			*debugfs;
 	bool				id_event;
 	bool				b_sess_valid_event;
+	bool				vbus_glitch_check_event;
 	/* imx28 needs swp instruction for writing */
 	bool				imx28_write_fix;
 	bool				supports_runtime_pm;
 	bool				in_lpm;
 	bool				wakeup_int;
 	struct timer_list		timer;
+	/* register save area for suspend&resume */
+	u32				pm_command;
+	u32				pm_status;
+	u32				pm_intr_enable;
+	u32				pm_frame_index;
+	u32				pm_segment;
+	u32				pm_frame_list;
+	u32				pm_async_next;
+	u32				pm_configured_flag;
+	u32				pm_portsc;
+	struct work_struct		power_lost_work;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
@@ -332,6 +353,24 @@ static inline u32 hw_test_and_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
 	hw_write(ci, reg, mask, data);
 	return (val & mask) >> __ffs(mask);
 }
+
+/**
+ * ci_otg_is_fsm_mode: runtime check if otg controller
+ * is in otg fsm mode.
+ */
+static inline bool ci_otg_is_fsm_mode(struct ci_hdrc *ci)
+{
+#ifdef CONFIG_USB_OTG_FSM
+	return ci->is_otg && ci->roles[CI_ROLE_HOST] &&
+					ci->roles[CI_ROLE_GADGET];
+#else
+	return false;
+#endif
+}
+
+u32 hw_read_intr_enable(struct ci_hdrc *ci);
+
+u32 hw_read_intr_status(struct ci_hdrc *ci);
 
 int hw_device_reset(struct ci_hdrc *ci, u32 mode);
 

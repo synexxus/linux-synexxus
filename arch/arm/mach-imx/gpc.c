@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2014 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -27,6 +27,7 @@
 #include "hardware.h"
 
 #define GPC_IMR1		0x008
+#define GPC_PGC_MF_PDN		0x220
 #define GPC_PGC_CPU_PDN		0x2a0
 #define GPC_PGC_GPU_PDN		0x260
 #define GPC_PGC_GPU_PUPSCR	0x264
@@ -46,21 +47,28 @@
 #define GPC_PGC_CPU_SW2ISO_SHIFT	8
 #define GPC_PGC_CPU_SW2ISO_MASK		0x3f
 #define GPC_CNTR		0x0
+#define GPC_CNTR_PCIE_PHY_PDU_SHIFT	0x7
+#define GPC_CNTR_PCIE_PHY_PDN_SHIFT	0x6
+#define PGC_PCIE_PHY_CTRL		0x200
+#define PGC_PCIE_PHY_PDN_EN		0x1
 #define GPC_CNTR_PU_UP_REQ_SHIFT	0x1
 #define GPC_CNTR_PU_DOWN_REQ_SHIFT	0x0
 
 #define IMR_NUM			4
 
 static void __iomem *gpc_base;
+static u32 gpc_mf_irqs[IMR_NUM];
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
 static struct clk *gpu3d_clk, *gpu3d_shader_clk, *gpu2d_clk, *gpu2d_axi_clk;
 static struct clk *lcd_axi_clk, *lcd_pix_clk, *epdc_axi_clk, *epdc_pix_clk;
 static struct clk *pxp_axi_clk;
+static struct clk *disp_axi_clk, *lcdif_axi_clk, *lcdif1_pix_clk, *lcdif2_pix_clk, *csi_mclk;
 static struct clk *openvg_axi_clk, *vpu_clk, *ipg_clk;
 static struct device *gpc_dev;
-struct regulator *pu_reg;
-struct notifier_block nb;
+static struct regulator *pu_reg;
+static struct notifier_block nb;
+static struct notifier_block nb_pcie;
 static struct regulator_dev *pu_dummy_regulator_rdev;
 static struct regulator_init_data pu_dummy_initdata = {
 	.constraints = {
@@ -73,24 +81,43 @@ static int pu_dummy_enable;
 
 static void imx_disp_clk(bool enable)
 {
-	if (enable) {
-		clk_prepare_enable(lcd_axi_clk);
-		clk_prepare_enable(lcd_pix_clk);
-		clk_prepare_enable(epdc_axi_clk);
-		clk_prepare_enable(epdc_pix_clk);
-		clk_prepare_enable(pxp_axi_clk);
-	} else {
-		clk_disable_unprepare(lcd_axi_clk);
-		clk_disable_unprepare(lcd_pix_clk);
-		clk_disable_unprepare(epdc_axi_clk);
-		clk_disable_unprepare(epdc_pix_clk);
-		clk_disable_unprepare(pxp_axi_clk);
+	if (cpu_is_imx6sl()) {
+		if (enable) {
+			clk_prepare_enable(lcd_axi_clk);
+			clk_prepare_enable(lcd_pix_clk);
+			clk_prepare_enable(epdc_axi_clk);
+			clk_prepare_enable(epdc_pix_clk);
+			clk_prepare_enable(pxp_axi_clk);
+		} else {
+			clk_disable_unprepare(lcd_axi_clk);
+			clk_disable_unprepare(lcd_pix_clk);
+			clk_disable_unprepare(epdc_axi_clk);
+			clk_disable_unprepare(epdc_pix_clk);
+			clk_disable_unprepare(pxp_axi_clk);
+		}
+	} else if (cpu_is_imx6sx()) {
+		if (enable) {
+			clk_prepare_enable(lcdif_axi_clk);
+			clk_prepare_enable(lcdif1_pix_clk);
+			clk_prepare_enable(lcdif2_pix_clk);
+			clk_prepare_enable(pxp_axi_clk);
+			clk_prepare_enable(csi_mclk);
+			clk_prepare_enable(disp_axi_clk);
+		} else {
+			clk_disable_unprepare(lcdif_axi_clk);
+			clk_disable_unprepare(lcdif1_pix_clk);
+			clk_disable_unprepare(lcdif2_pix_clk);
+			clk_disable_unprepare(pxp_axi_clk);
+			clk_disable_unprepare(csi_mclk);
+			clk_disable_unprepare(disp_axi_clk);
+		}
 	}
 }
 
 static void imx_gpc_dispmix_on(void)
 {
-	if (cpu_is_imx6sl()) {
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
 		imx_disp_clk(true);
 
 		writel_relaxed(0x0, gpc_base + GPC_PGC_DISP_PGCR_OFFSET);
@@ -105,7 +132,8 @@ static void imx_gpc_dispmix_on(void)
 
 static void imx_gpc_dispmix_off(void)
 {
-	if (cpu_is_imx6sl()) {
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
 		imx_disp_clk(true);
 
 		writel_relaxed(0xFFFFFFFF,
@@ -121,12 +149,36 @@ static void imx_gpc_dispmix_off(void)
 	}
 }
 
+static void imx_gpc_mf_mix_off(void)
+{
+	int i;
+
+	for (i = 0; i < IMR_NUM; i++)
+		if ((gpc_wake_irqs[i] & gpc_mf_irqs[i]) != 0)
+			return;
+
+	/*
+	 * As some drivers are not ready for this
+	 * Mega/Fast mix off feature, so just skip the
+	 * setting of turning off M/F mix, if anyone
+	 * want to enable this feature, just add below
+	 * two lines back.
+	 *
+	 * pr_info("Turn off M/F mix!\n");
+	 * writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+	 *
+	 */
+}
+
 void imx_gpc_pre_suspend(bool arm_power_off)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
 	imx_gpc_dispmix_off();
+
+	if (cpu_is_imx6sx() && arm_power_off)
+		imx_gpc_mf_mix_off();
 
 	if (arm_power_off)
 		/* Tell GPC to power off ARM core when suspend */
@@ -145,6 +197,10 @@ void imx_gpc_post_resume(void)
 
 	/* Keep ARM core powered on for other low-power modes */
 	writel_relaxed(0x0, gpc_base + GPC_PGC_CPU_PDN);
+
+	/* Keep M/F mix powered on for other low-power modes */
+	if (cpu_is_imx6sx())
+		writel_relaxed(0x0, gpc_base + GPC_PGC_MF_PDN);
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpc_saved_imrs[i], reg_imr1 + i * 4);
@@ -225,6 +281,8 @@ static void imx_pu_clk(bool enable)
 		if (cpu_is_imx6sl()) {
 			clk_prepare_enable(gpu2d_clk);
 			clk_prepare_enable(openvg_axi_clk);
+		} else if (cpu_is_imx6sx()) {
+			clk_prepare_enable(gpu3d_clk);
 		} else {
 			clk_prepare_enable(gpu3d_clk);
 			clk_prepare_enable(gpu3d_shader_clk);
@@ -237,6 +295,8 @@ static void imx_pu_clk(bool enable)
 		if (cpu_is_imx6sl()) {
 			clk_disable_unprepare(gpu2d_clk);
 			clk_disable_unprepare(openvg_axi_clk);
+		} else if (cpu_is_imx6sx()) {
+			clk_disable_unprepare(gpu3d_clk);
 		} else {
 			clk_disable_unprepare(gpu3d_clk);
 			clk_disable_unprepare(gpu3d_shader_clk);
@@ -276,16 +336,42 @@ static void imx_gpc_pu_enable(bool enable)
 
 		imx_pu_clk(true);
 		writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
-		writel_relaxed(1 << GPC_CNTR_PU_UP_REQ_SHIFT,
-			gpc_base + GPC_CNTR);
+		/*
+		 * bit17 and bit18 as VADC power state control are different
+		 * as the other bits in GPC_CNTR  whose request is set by
+		 * 1 and nothing involved if set by 0. On imx6sx, zero of bit
+		 * 17 and bit18 will power off VADC directly, so read GPC_CNTR
+		 * firstly before write to avoid touching other bits.
+		 */
+		if (cpu_is_imx6sx()) {
+			u32 value = readl_relaxed(gpc_base + GPC_CNTR);
+
+			value |= 1 << GPC_CNTR_PU_UP_REQ_SHIFT;
+			writel_relaxed(value, gpc_base + GPC_CNTR);
+		} else
+			writel_relaxed(1 << GPC_CNTR_PU_UP_REQ_SHIFT,
+				gpc_base + GPC_CNTR);
 		while (readl_relaxed(gpc_base + GPC_CNTR) &
 			(1 << GPC_CNTR_PU_UP_REQ_SHIFT))
 			;
 		imx_pu_clk(false);
 	} else {
 		writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
-		writel_relaxed(1 << GPC_CNTR_PU_DOWN_REQ_SHIFT,
-			gpc_base + GPC_CNTR);
+		/*
+		 * bit17 and bit18 as VADC power state control are different
+		 * as the other bits in GPC_CNTR  whose request is set by
+		 * 1 and nothing involved if set by 0. On imx6sx, zero of bit
+		 * 17 and bit18 will power off VADC directly, so read GPC_CNTR
+		 * firstly before write to avoid touching other bits.
+		 */
+		if (cpu_is_imx6sx()) {
+			u32 value = readl_relaxed(gpc_base + GPC_CNTR);
+
+			value |= 1 << GPC_CNTR_PU_DOWN_REQ_SHIFT;
+			writel_relaxed(value, gpc_base + GPC_CNTR);
+		} else
+			writel_relaxed(1 << GPC_CNTR_PU_DOWN_REQ_SHIFT,
+					gpc_base + GPC_CNTR);
 		while (readl_relaxed(gpc_base + GPC_CNTR) &
 			(1 << GPC_CNTR_PU_DOWN_REQ_SHIFT))
 			;
@@ -317,6 +403,31 @@ static int imx_gpc_regulator_notify(struct notifier_block *nb,
 		break;
 	case REGULATOR_EVENT_ENABLE:
 		imx_gpc_pu_enable(true);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static int imx_pcie_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	u32 value = readl_relaxed(gpc_base + GPC_CNTR);
+
+	switch (event) {
+	case REGULATOR_EVENT_VOLTAGE_CHANGE:
+	case REGULATOR_EVENT_ENABLE:
+		value |= 1 << GPC_CNTR_PCIE_PHY_PDU_SHIFT;
+		writel_relaxed(value, gpc_base + GPC_CNTR);
+		break;
+	case REGULATOR_EVENT_PRE_DISABLE:
+		value |= 1 << GPC_CNTR_PCIE_PHY_PDN_SHIFT;
+		writel_relaxed(value, gpc_base + GPC_CNTR);
+		writel_relaxed(PGC_PCIE_PHY_PDN_EN,
+				gpc_base + PGC_PCIE_PHY_CTRL);
 		break;
 	default:
 		break;
@@ -359,6 +470,21 @@ void __init imx_gpc_init(void)
 	of_property_read_u32(np, "fsl,cpu_pupscr_sw", &cpu_pupscr_sw);
 	of_property_read_u32(np, "fsl,cpu_pdnscr_iso2sw", &cpu_pdnscr_iso2sw);
 	of_property_read_u32(np, "fsl,cpu_pdnscr_iso", &cpu_pdnscr_iso);
+
+	/* Read supported wakeup source in M/F domain */
+	if (cpu_is_imx6sx()) {
+		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 0,
+			&gpc_mf_irqs[0]);
+		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 1,
+			&gpc_mf_irqs[1]);
+		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 2,
+			&gpc_mf_irqs[2]);
+		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 3,
+			&gpc_mf_irqs[3]);
+		if (!(gpc_mf_irqs[0] | gpc_mf_irqs[1] |
+			gpc_mf_irqs[2] | gpc_mf_irqs[3]))
+			pr_info("No wakeup source in Mega/Fast domain found!\n");
+	}
 
 	/* Update CPU PUPSCR timing if it is defined in dts */
 	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PUPSCR);
@@ -475,6 +601,25 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	}
 	nb.notifier_call = &imx_gpc_regulator_notify;
 
+	if (cpu_is_imx6sx()) {
+		struct regulator *pcie_reg;
+
+		pcie_reg = devm_regulator_get(gpc_dev, "pcie");
+		if (IS_ERR(pcie_reg)) {
+			ret = PTR_ERR(pcie_reg);
+			dev_info(gpc_dev, "pcie regulator not ready.\n");
+			return ret;
+		}
+		nb_pcie.notifier_call = &imx_pcie_regulator_notify;
+
+		ret = regulator_register_notifier(pcie_reg, &nb_pcie);
+		if (ret) {
+			dev_err(gpc_dev,
+				"pcie regulator notifier request failed\n");
+			return ret;
+		}
+	}
+
 	/* Get gpu&vpu clk for power up PU by GPC */
 	if (cpu_is_imx6sl()) {
 		gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_podf");
@@ -489,6 +634,20 @@ static int imx_gpc_probe(struct platform_device *pdev)
 			|| IS_ERR(ipg_clk) || IS_ERR(lcd_axi_clk)
 			|| IS_ERR(lcd_pix_clk) || IS_ERR(epdc_axi_clk)
 			|| IS_ERR(epdc_pix_clk) || IS_ERR(pxp_axi_clk)) {
+			dev_err(gpc_dev, "failed to get clk!\n");
+			return -ENOENT;
+		}
+	} else if (cpu_is_imx6sx()) {
+		gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
+		ipg_clk = devm_clk_get(gpc_dev, "ipg");
+		pxp_axi_clk = devm_clk_get(gpc_dev, "pxp_axi");
+		disp_axi_clk = devm_clk_get(gpc_dev, "disp_axi");
+		lcdif1_pix_clk = devm_clk_get(gpc_dev, "lcdif1_pix");
+		lcdif_axi_clk = devm_clk_get(gpc_dev, "lcdif_axi");
+		lcdif2_pix_clk = devm_clk_get(gpc_dev, "lcdif2_pix");
+		csi_mclk = devm_clk_get(gpc_dev, "csi_mclk");
+		if (IS_ERR(gpu3d_clk) || IS_ERR(ipg_clk) || IS_ERR(pxp_axi_clk) || IS_ERR(disp_axi_clk) ||
+			IS_ERR(lcdif1_pix_clk) || IS_ERR(lcdif_axi_clk) || IS_ERR(lcdif2_pix_clk) || IS_ERR(csi_mclk)) {
 			dev_err(gpc_dev, "failed to get clk!\n");
 			return -ENOENT;
 		}
@@ -532,9 +691,18 @@ static struct platform_driver imx_gpc_platdrv = {
 	},
 	.probe		= imx_gpc_probe,
 };
-module_platform_driver(imx_gpc_platdrv);
 
-module_platform_driver(pu_dummy_driver);
+static int __init imx6_gpc_init(void)
+{
+	return platform_driver_probe(&imx_gpc_platdrv, imx_gpc_probe);
+}
+fs_initcall(imx6_gpc_init);
+
+static int __init imx6_pudummy_init(void)
+{
+	return platform_driver_probe(&pu_dummy_driver, pu_dummy_probe);
+}
+fs_initcall(imx6_pudummy_init);
 
 MODULE_AUTHOR("Anson Huang <b20788@freescale.com>");
 MODULE_DESCRIPTION("Freescale i.MX GPC driver");

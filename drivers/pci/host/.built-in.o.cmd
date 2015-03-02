@@ -1,0 +1,1 @@
+cmd_drivers/pci/host/built-in.o :=  /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/pci/host/built-in.o drivers/pci/host/pcie-designware.o drivers/pci/host/pci-imx6.o drivers/pci/host/pci-imx6-ep-driver.o 

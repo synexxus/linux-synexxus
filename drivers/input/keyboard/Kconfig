@@ -2,7 +2,7 @@
 # Input core configuration
 #
 menuconfig INPUT_KEYBOARD
-	bool "Keyboards" if EXPERT || !X86
+	bool "Keyboards"
 	default y
 	help
 	  Say Y here, and a list of supported keyboards will be displayed.
@@ -67,7 +67,7 @@ config KEYBOARD_ATARI
 	  module will be called atakbd.
 
 config KEYBOARD_ATKBD
-	tristate "AT keyboard" if EXPERT || !X86
+	tristate "AT keyboard"
 	default y
 	select SERIO
 	select SERIO_LIBPS2
@@ -387,6 +387,13 @@ config KEYBOARD_MPR121
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called mpr121_touchkey.
+
+config KEYBOARD_SNVS_PWRKEY
+	tristate "IMX6SX SNVS Power Key Driver"
+	depends on SOC_IMX6SX
+	help
+	  This is the snvs powerkey driver for the Freescale i.MX6SX application
+	  processors.
 
 config KEYBOARD_IMX
 	tristate "IMX keypad support"

@@ -173,6 +173,8 @@ struct adv7604_video_standards {
 /* sorted by number of lines */
 static const struct adv7604_video_standards adv7604_prim_mode_comp[] = {
 	/* { V4L2_DV_BT_CEA_720X480P59_94, 0x0a, 0x00 }, TODO flickering */
+	{ V4L2_DV_BT_CEA_720X480I59_94, 0x02, 0x00 },	//added Interlace
+	{ V4L2_DV_BT_CEA_720X576I50, 0x03, 0x00 },	//added Interlace
 	{ V4L2_DV_BT_CEA_720X576P50, 0x0b, 0x00 },
 	{ V4L2_DV_BT_CEA_1280X720P50, 0x19, 0x01 },
 	{ V4L2_DV_BT_CEA_1280X720P60, 0x19, 0x00 },
@@ -286,10 +288,9 @@ static s32 adv_smbus_read_byte_data_check(struct i2c_client *client,
 {
 	union i2c_smbus_data data;
 
-	if (!i2c_smbus_xfer(client->adapter, client->addr, client->flags,
-			I2C_SMBUS_READ, command,
-			I2C_SMBUS_BYTE_DATA, &data))
+	if (!i2c_smbus_xfer(client->adapter, client->addr, client->flags,I2C_SMBUS_READ, command, I2C_SMBUS_BYTE_DATA, &data))
 		return data.byte;
+
 	if (check)
 		v4l_err(client, "error reading %02x, %02x\n",
 				client->addr, command);

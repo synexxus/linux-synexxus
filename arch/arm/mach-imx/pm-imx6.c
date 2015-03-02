@@ -15,6 +15,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_fdt.h>
 #include <linux/of_irq.h>
 #include <linux/suspend.h>
 #include <linux/genalloc.h>
@@ -64,6 +65,15 @@
 
 #define MX6_INT_IOMUXC			32
 
+#define ROMC_ROMPATCH0D			0xf0
+#define ROMC_ROMPATCHCNTL		0xf4
+#define ROMC_ROMPATCHENL		0xfc
+#define ROMC_ROMPATCH0A			0x100
+#define BM_ROMPATCHCNTL_0D		(0x1 << 0)
+#define BM_ROMPATCHCNTL_DIS		(0x1 << 29)
+#define BM_ROMPATCHENL_0D		(0x1 << 0)
+#define ROM_ADDR_FOR_INTERNAL_RAM_BASE	0x10d7c
+
 unsigned long iram_tlb_base_addr;
 unsigned long iram_tlb_phys_addr;
 
@@ -73,6 +83,14 @@ static int (*suspend_in_iram_fn)(void *iram_vbase,
 	unsigned long iram_pbase, unsigned int cpu_type);
 static unsigned int cpu_type;
 static void __iomem *ccm_base;
+struct regmap *romcp;
+
+unsigned long total_suspend_size;
+static unsigned long dcr;
+static unsigned long pcr;
+
+extern unsigned long imx6_suspend_start asm("imx6_suspend_start");
+extern unsigned long imx6_suspend_end asm("imx6_suspend_end");
 
 unsigned long save_ttbr1(void)
 {
@@ -99,7 +117,7 @@ void imx6_set_cache_lpm_in_wait(bool enable)
 	if ((cpu_is_imx6q() && imx_get_soc_revision() >
 		IMX_CHIP_REVISION_1_1) ||
 		(cpu_is_imx6dl() && imx_get_soc_revision() >
-		IMX_CHIP_REVISION_1_0)) {
+		IMX_CHIP_REVISION_1_0) || cpu_is_imx6sx()) {
 		u32 val;
 
 		val = readl_relaxed(ccm_base + CGPR);
@@ -109,6 +127,34 @@ void imx6_set_cache_lpm_in_wait(bool enable)
 			val &= ~BM_CGPR_INT_MEM_CLK_LPM;
 		writel_relaxed(val, ccm_base + CGPR);
 	}
+}
+
+static void imx6_save_cpu_arch_regs(void)
+{
+	/* Save the Diagnostic Control Register. */
+	asm volatile(
+		"mrc p15, 0, %0, c15, c0, 1\n"
+	: "=r" (dcr)
+	);
+	/* Save the Power Control Register. */
+	asm volatile(
+		"mrc p15, 0, %0, c15, c0, 0\n"
+	: "=r" (pcr)
+	);
+}
+
+static void imx6_restore_cpu_arch_regs(void)
+{
+	/* Restore the diagnostic Control Register. */
+	asm volatile(
+		"mcr p15, 0, %0, c15, c0, 1\n"
+	: : "r" (dcr)
+	);
+	/* Restore the Power Control Register. */
+	asm volatile(
+		"mcr p15, 0, %0, c15, c0, 0\n"
+	: : "r" (pcr)
+	);
 }
 
 static void imx6_enable_rbc(bool enable)
@@ -191,7 +237,7 @@ int imx6_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= BM_CLPCR_ARM_CLK_DIS_ON_LPM;
 		val &= ~BM_CLPCR_VSTBY;
 		val &= ~BM_CLPCR_SBYOS;
-		if (cpu_is_imx6sl())
+		if (cpu_is_imx6sl() || cpu_is_imx6sx())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
@@ -200,8 +246,9 @@ int imx6_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x2 << BP_CLPCR_LPM;
 		val &= ~BM_CLPCR_VSTBY;
 		val &= ~BM_CLPCR_SBYOS;
-		if (cpu_is_imx6sl()) {
+		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
+		if (cpu_is_imx6sl() || cpu_is_imx6sx()) {
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
 		} else {
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
@@ -217,8 +264,9 @@ int imx6_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x3 << BP_CLPCR_STBY_COUNT;
 		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
-		if (cpu_is_imx6sl()) {
+		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
+		if (cpu_is_imx6sl() || cpu_is_imx6sx()) {
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
 		} else {
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
@@ -253,13 +301,19 @@ static int imx6_pm_enter(suspend_state_t state)
 {
 	struct regmap *g;
 
+	if (!iram_tlb_base_addr) {
+		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume code. \
+			Please ensure device tree has an entry for fsl,lpm-sram.\n");
+			return -EINVAL;
+	}
+
 	/*
 	 * L2 can exit by 'reset' or Inband beacon (from remote EP)
 	 * toggling phy_powerdown has same effect as 'inband beacon'
 	 * So, toggle bit18 of GPR1, used as a workaround of errata
 	 * "PCIe PCIe does not support L2 Power Down"
 	 */
-	if (IS_ENABLED(CONFIG_PCI_IMX6)) {
+	if (IS_ENABLED(CONFIG_PCI_IMX6) && !cpu_is_imx6sx()) {
 		g = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 		if (IS_ERR(g)) {
 			pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
@@ -290,9 +344,13 @@ static int imx6_pm_enter(suspend_state_t state)
 		imx_gpc_pre_suspend(true);
 		imx_anatop_pre_suspend();
 		imx_set_cpu_jump(0, v7_cpu_resume);
+		imx6_save_cpu_arch_regs();
+
 		/* Zzz ... */
 		cpu_suspend(0, imx6_suspend_finish);
-		if (!cpu_is_imx6sl())
+
+		imx6_restore_cpu_arch_regs();
+		if (!cpu_is_imx6sl() && !cpu_is_imx6sx())
 			imx_smp_prepare();
 		imx_anatop_post_resume();
 		imx_gpc_post_resume();
@@ -311,7 +369,12 @@ static int imx6_pm_enter(suspend_state_t state)
 	 * So, toggle bit18 of GPR1, used as a workaround of errata
 	 * "PCIe PCIe does not support L2 Power Down"
 	 */
-	if (IS_ENABLED(CONFIG_PCI_IMX6)) {
+	if (IS_ENABLED(CONFIG_PCI_IMX6) && !cpu_is_imx6sx()) {
+		g = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+		if (IS_ERR(g)) {
+			pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
+			return PTR_ERR(g);
+		}
 		regmap_update_bits(g, IOMUXC_GPR1, IMX6Q_GPR1_PCIE_TEST_PD,
 				!IMX6Q_GPR1_PCIE_TEST_PD);
 	}
@@ -328,8 +391,43 @@ static struct map_desc imx6_pm_io_desc[] __initdata = {
 	imx_map_entry(MX6Q, ANATOP, MT_DEVICE),
 	imx_map_entry(MX6Q, GPC, MT_DEVICE),
 	imx_map_entry(MX6Q, L2, MT_DEVICE),
-	imx_map_entry(MX6Q, IRAM_TLB, MT_MEMORY_NONCACHED),
 };
+
+static struct map_desc iram_tlb_io_desc __initdata = {
+	/* .virtual and .pfn are run-time assigned */
+	.length		= SZ_1M,
+	.type		= MT_MEMORY_NONCACHED,
+};
+
+const static char *low_power_ocram_match[] __initconst = {
+	"fsl,lpm-sram",
+	NULL
+};
+
+static int __init imx6_dt_find_lpsram(unsigned long node,
+		const char *uname, int depth, void *data)
+{
+	unsigned long lpram_addr;
+	__be32 *prop;
+
+	if (of_flat_dt_match(node, low_power_ocram_match)) {
+		prop = of_get_flat_dt_prop(node, "reg", NULL);
+		if (!prop)
+			return -EINVAL;
+
+		lpram_addr = be32_to_cpup(prop);
+
+		/* We need to create a 1M page table entry. */
+		iram_tlb_io_desc.virtual = IMX_IO_P2V(lpram_addr & 0xFFF00000);
+		iram_tlb_io_desc.pfn = __phys_to_pfn(lpram_addr & 0xFFF00000);
+		iram_tlb_phys_addr = lpram_addr;
+		iram_tlb_base_addr = IMX_IO_P2V(lpram_addr);
+
+		iotable_init(&iram_tlb_io_desc, 1);
+	}
+	return 0;
+
+}
 
 void __init imx6_pm_map_io(void)
 {
@@ -338,43 +436,49 @@ void __init imx6_pm_map_io(void)
 	iotable_init(imx6_pm_io_desc, ARRAY_SIZE(imx6_pm_io_desc));
 
 	/*
-	 * Allocate IRAM for page tables to be used
-	 * when DDR is in self-refresh.
+	 * Get the address of IRAM or OCRAM to be used by the low
+	 * power code from the device tree.
 	 */
-	iram_tlb_phys_addr = MX6Q_IRAM_TLB_BASE_ADDR;
-	iram_tlb_base_addr = IMX_IO_P2V(MX6Q_IRAM_TLB_BASE_ADDR);
+	WARN_ON(of_scan_flat_dt(imx6_dt_find_lpsram, NULL));
+
+	/* Return if no IRAM space is allocated for suspend/resume code. */
+	if (!iram_tlb_base_addr)
+		return;
 
 	/* Set all entries to 0. */
-	memset((void *)iram_tlb_base_addr, 0, SZ_16K);
+	memset((void *)iram_tlb_base_addr, 0, MX6Q_IRAM_TLB_SIZE);
 
 	/*
 	 * Make sure the IRAM virtual address has a mapping
 	 * in the IRAM page table.
+	 * Only use the top 11 bits [31-20] when storing the
+	 * physical address in the page table as only these
+	 * bits are required for 1M mapping.
 	 */
-	i = (IMX_IO_P2V(MX6Q_IRAM_TLB_BASE_ADDR) >> 18) / 4;
+	i = ((iram_tlb_base_addr >> 20) << 2) / 4;
 	*((unsigned long *)iram_tlb_base_addr + i) =
-		MX6Q_IRAM_TLB_BASE_ADDR | TT_ATTRIB_NON_CACHEABLE_1M;
+		(iram_tlb_phys_addr & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
 	/*
 	 * Make sure the AIPS1 virtual address has a mapping
 	 * in the IRAM page table.
 	 */
-	i = (IMX_IO_P2V(MX6Q_AIPS1_BASE_ADDR) >> 18) / 4;
+	i = ((IMX_IO_P2V(MX6Q_AIPS1_BASE_ADDR) >> 20) << 2) / 4;
 	*((unsigned long *)iram_tlb_base_addr + i) =
-		MX6Q_AIPS1_BASE_ADDR | TT_ATTRIB_NON_CACHEABLE_1M;
+		(MX6Q_AIPS1_BASE_ADDR  & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
 	/*
 	* Make sure the AIPS2 virtual address has a mapping
 	* in the IRAM page table.
 	*/
-	i = (IMX_IO_P2V(MX6Q_AIPS2_BASE_ADDR) >> 18) / 4;
+	i = ((IMX_IO_P2V(MX6Q_AIPS2_BASE_ADDR) >> 20) << 2) / 4;
 	*((unsigned long *)iram_tlb_base_addr + i) =
-		MX6Q_AIPS2_BASE_ADDR | TT_ATTRIB_NON_CACHEABLE_1M;
+		(MX6Q_AIPS2_BASE_ADDR  & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
 	/*
 	 * Make sure the AIPS2 virtual address has a mapping
 	 * in the IRAM page table.
 	 */
-	i = (IMX_IO_P2V(MX6Q_L2_BASE_ADDR) >> 18) / 4;
+	i = ((IMX_IO_P2V(MX6Q_L2_BASE_ADDR) >> 20) << 2) / 4;
 	*((unsigned long *)iram_tlb_base_addr + i) =
-		MX6Q_L2_BASE_ADDR | TT_ATTRIB_NON_CACHEABLE_1M;
+		(MX6Q_L2_BASE_ADDR  & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
 
 }
 
@@ -397,13 +501,24 @@ void imx6_pm_set_ccm_base(void __iomem *base)
 
 void __init imx6_pm_init(void)
 {
-	iram_paddr = MX6_SUSPEND_IRAM_ADDR;
-	/* Get the virtual address of the suspend code. */
-	suspend_iram_base = (void *)IMX_IO_P2V(MX6Q_IRAM_TLB_BASE_ADDR) +
-			(iram_paddr - MX6Q_IRAM_TLB_BASE_ADDR);
+	unsigned long suspend_code_size;
 
+	if (!iram_tlb_base_addr) {
+		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume code. \
+Please ensure device tree has an entry fsl,lpm-sram\n");
+			return;
+	}
+
+	iram_paddr = iram_tlb_phys_addr + MX6_SUSPEND_IRAM_ADDR_OFFSET;
+	/* Get the virtual address of the suspend code. */
+	suspend_iram_base = (void *)IMX_IO_P2V(iram_tlb_phys_addr) +
+			MX6_SUSPEND_IRAM_ADDR_OFFSET;
+
+	suspend_code_size = (&imx6_suspend_end -&imx6_suspend_start) *4;
 	suspend_in_iram_fn = (void *)fncpy(suspend_iram_base,
-		&imx6_suspend, MX6_SUSPEND_IRAM_SIZE);
+		&imx6_suspend, suspend_code_size);
+	/* Now add the space used for storing various registers and IO in suspend. */
+	total_suspend_size = suspend_code_size + MX6_SUSPEND_IRAM_DATA_SIZE;
 
 	suspend_set_ops(&imx6_pm_ops);
 
@@ -412,6 +527,35 @@ void __init imx6_pm_init(void)
 		cpu_type = MXC_CPU_IMX6Q;
 	else if (cpu_is_imx6dl())
 		cpu_type = MXC_CPU_IMX6DL;
-	else
+	else if (cpu_is_imx6sl())
 		cpu_type = MXC_CPU_IMX6SL;
+	else {
+		cpu_type = MXC_CPU_IMX6SX;
+		if (imx_get_soc_revision() < IMX_CHIP_REVISION_1_2) {
+			/*
+			 * As there is a 16K OCRAM(start from 0x8f8000)
+			 * dedicated for low power function on i.MX6SX,
+			 * but ROM did NOT do the ocram address change
+			 * accordingly, so we need to add a data patch
+			 * to workaround this issue, otherwise, system
+			 * will fail to resume from DSM mode. TO1.2 fixes
+			 * this issue.
+			 */
+			romcp = syscon_regmap_lookup_by_compatible(
+				"fsl,imx6sx-romcp");
+			if (IS_ERR(romcp)) {
+				pr_err("failed to find fsl,imx6sx-romcp regmap\n");
+				return;
+			}
+			regmap_write(romcp, ROMC_ROMPATCH0D, iram_paddr);
+			regmap_update_bits(romcp, ROMC_ROMPATCHCNTL,
+				BM_ROMPATCHCNTL_0D, BM_ROMPATCHCNTL_0D);
+			regmap_update_bits(romcp, ROMC_ROMPATCHENL,
+				BM_ROMPATCHENL_0D, BM_ROMPATCHENL_0D);
+			regmap_write(romcp, ROMC_ROMPATCH0A,
+				ROM_ADDR_FOR_INTERNAL_RAM_BASE);
+			regmap_update_bits(romcp, ROMC_ROMPATCHCNTL,
+				BM_ROMPATCHCNTL_DIS, ~BM_ROMPATCHCNTL_DIS);
+		}
+	}
 }

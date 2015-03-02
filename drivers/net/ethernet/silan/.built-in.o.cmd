@@ -1,0 +1,1 @@
+cmd_drivers/net/ethernet/silan/built-in.o :=  rm -f drivers/net/ethernet/silan/built-in.o; /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ar rcsD drivers/net/ethernet/silan/built-in.o

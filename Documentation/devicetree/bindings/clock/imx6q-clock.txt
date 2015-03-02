@@ -36,7 +36,7 @@ clocks and IDs.
 	periph2_clk2_sel	21
 	axi_sel			22
 	esai_sel		23
-	asrc_sel		24
+	spdif1_sel		24
 	spdif_sel		25
 	gpu2d_axi		26
 	gpu3d_axi		27
@@ -45,8 +45,6 @@ clocks and IDs.
 	gpu3d_shader_sel	30
 	ipu1_sel		31
 	ipu2_sel		32
-	ldb_di0_sel		33
-	ldb_di1_sel		34
 	ipu1_di0_pre_sel	35
 	ipu1_di1_pre_sel	36
 	ipu2_di0_pre_sel	37
@@ -78,8 +76,8 @@ clocks and IDs.
 	ipg_per			63
 	esai_pred		64
 	esai_podf		65
-	asrc_pred		66
-	asrc_podf		67
+	spdif1_pred		66
+	spdif1_podf		67
 	spdif_pred		68
 	spdif_podf		69
 	can_root		70
@@ -117,7 +115,7 @@ clocks and IDs.
 	arm			104
 	ahb			105
 	apbh_dma		106
-	asrc			107
+	asrc_gate		107
 	can1_ipg		108
 	can1_serial		109
 	can2_ipg		110
@@ -128,7 +126,7 @@ clocks and IDs.
 	ecspi4			115
 	ecspi5			116
 	enet			117
-	esai			118
+	esai_extal		118
 	gpt_ipg			119
 	gpt_ipg_per		120
 	gpu2d_core		121
@@ -235,6 +233,14 @@ clocks and IDs.
 	lvds2_out		222
 	anaclk1			223
 	anaclk2			224
+	spdif1                  225
+	asrc_ipg                226
+	asrc_mem                227
+	esai_ipg		228
+	esai_mem		229
+	axi_alt_sel		230
+	dcic1			231
+	dcic2			232
 
 Examples:
 

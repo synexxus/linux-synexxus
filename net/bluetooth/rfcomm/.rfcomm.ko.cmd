@@ -1,0 +1,1 @@
+cmd_net/bluetooth/rfcomm/rfcomm.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o net/bluetooth/rfcomm/rfcomm.ko net/bluetooth/rfcomm/rfcomm.o net/bluetooth/rfcomm/rfcomm.mod.o

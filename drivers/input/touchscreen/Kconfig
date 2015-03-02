@@ -86,16 +86,6 @@ config TOUCHSCREEN_AD7879_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad7879-spi.
 
-config TOUCHSCREEN_AR1020_I2C
-	tristate "Microchip AR1020 I2C touchscreen"
-	depends on I2C
-	help
-	  Say Y here if you have a Microchip AR1020 I2C Controller and
-	  want to enable support for the built-in touchscreen.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called ar1020-i2c.
-
 config TOUCHSCREEN_ATMEL_MXT
 	tristate "Atmel mXT I2C Touchscreen"
 	depends on I2C
@@ -265,22 +255,6 @@ config TOUCHSCREEN_ELAN
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called elan-touch.
-
-config TOUCHSCREEN_FT5X06
-	tristate "Focaltech FT5X06 5 point touchscreen"
-	select I2C
-	help
-	  If you say yes here you get touchscreen support through
-	  FocalTech's FT5X06 controller.
-
-config TOUCHSCREEN_FT5X06_SINGLE_TOUCH
-	bool "FT5X06 touchscreen as single-touch"
-	default N
-	depends on TOUCHSCREEN_FT5X06
-	help
-	  If you say yes here you get single-touch touchscreen support
-	  on the FT5X06 I2C controller.
-	  If you say "no", you'll get the normal 5-finger goodness.
 
 config TOUCHSCREEN_FUJITSU
 	tristate "Fujitsu serial touchscreen"
@@ -859,17 +833,6 @@ config TOUCHSCREEN_TSC_SERIO
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc40.
-
-config TOUCHSCREEN_TSC2004
-	tristate "TSC2004 based touchscreens"
-	depends on I2C
-	help
-	  Say Y here if you have a TSC2004 based touchscreen.
-
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called tsc2004.
 
 config TOUCHSCREEN_TSC2005
         tristate "TSC2005 based touchscreens"

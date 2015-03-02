@@ -191,10 +191,14 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 		_ipu_csi_ccir_err_detection_disable(ipu, csi);
 	}
 
-	dev_dbg(ipu->dev, "CSI_SENS_CONF = 0x%08X\n",
+	printk(KERN_INFO "%s: CSI%d_SENS_CONF = 0x%08X\n",__func__,csi,
 		ipu_csi_read(ipu, csi, CSI_SENS_CONF));
-	dev_dbg(ipu->dev, "CSI_ACT_FRM_SIZE = 0x%08X\n",
+	printk(KERN_INFO "%s: CSI%d_SENS_FRM_SIZE = 0x%08X\n",__func__,csi,
+		ipu_csi_read(ipu, csi, CSI_SENS_FRM_SIZE));
+	printk(KERN_INFO "%s: CSI%d_ACT_FRM_SIZE = 0x%08X\n",__func__,csi,
 		ipu_csi_read(ipu, csi, CSI_ACT_FRM_SIZE));
+	printk(KERN_INFO "%s: CSI%d_OUT_FRM_CTRL = 0x%08X\n",__func__,csi,
+		ipu_csi_read(ipu, csi, CSI_OUT_FRM_CTRL));
 
 	mutex_unlock(&ipu->mutex_lock);
 
@@ -324,6 +328,8 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 	mutex_unlock(&ipu->mutex_lock);
 
 	_ipu_put(ipu);
+
+	printk(KERN_INFO "%s: CSI_OUT_FRM_CTRL: 0x%08X\n",__func__, temp);
 }
 EXPORT_SYMBOL(ipu_csi_set_window_pos);
 

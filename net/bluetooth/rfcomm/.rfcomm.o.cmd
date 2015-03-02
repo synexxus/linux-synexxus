@@ -1,0 +1,1 @@
+cmd_net/bluetooth/rfcomm/rfcomm.o := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o net/bluetooth/rfcomm/rfcomm.o net/bluetooth/rfcomm/core.o net/bluetooth/rfcomm/sock.o net/bluetooth/rfcomm/tty.o 

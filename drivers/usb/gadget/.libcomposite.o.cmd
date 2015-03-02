@@ -1,0 +1,1 @@
+cmd_drivers/usb/gadget/libcomposite.o := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/usb/gadget/libcomposite.o drivers/usb/gadget/usbstring.o drivers/usb/gadget/config.o drivers/usb/gadget/epautoconf.o drivers/usb/gadget/composite.o drivers/usb/gadget/functions.o drivers/usb/gadget/configfs.o 

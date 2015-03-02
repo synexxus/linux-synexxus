@@ -1,0 +1,1 @@
+cmd_drivers/media/i2c/adv7604.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o drivers/media/i2c/adv7604.ko drivers/media/i2c/adv7604.o drivers/media/i2c/adv7604.mod.o

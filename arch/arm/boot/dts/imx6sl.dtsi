@@ -13,6 +13,11 @@
 
 / {
 	aliases {
+		csi0 = &csi1;
+		mmc0 = &usdhc1;
+		mmc1 = &usdhc2;
+		mmc2 = &usdhc3;
+		mmc3 = &usdhc4;
 		serial0 = &uart1;
 		serial1 = &uart2;
 		serial2 = &uart3;
@@ -609,9 +614,22 @@
 				#reset-cells = <1>;
 			};
 
-			ocram: sram@00904000 {
+			ocrams: sram@00900000 {
+				compatible = "fsl,lpm-sram";
+				reg = <0x00900000 0x4000>;
+				clocks = <&clks IMX6SL_CLK_OCRAM>;
+			};
+
+			ocrams_ddr: sram@00904000 {
+				compatible = "fsl,ddr-lpm-sram";
+				reg = <0x00904000 0x1000>;
+				clocks = <&clks 142>;
+			};
+
+
+			ocram: sram@00905000 {
 				compatible = "mmio-sram";
-				reg = <0x00904000 0x1C000>;
+				reg = <0x00905000 0x1B000>;
 				clocks = <&clks IMX6SL_CLK_OCRAM>;
 			};
 
@@ -638,10 +656,14 @@
 				reg = <0x020e0000 0x4000>;
 			};
 
-			csi: csi@020e4000 {
+			csi1: csi@020e4000 {
 				compatible = "fsl,imx6sl-csi";
 				reg = <0x020e4000 0x4000>;
 				interrupts = <0 7 0x04>;
+				clocks = <&clks IMX6SL_CLK_DUMMY>,
+					<&clks IMX6SL_CLK_DUMMY>,
+					<&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "disp-axi", "csi_mclk", "dcic";
 				status = "disabled";
 			};
 
@@ -667,8 +689,8 @@
 				compatible = "fsl,imx6sl-pxp-dma", "fsl,imx6dl-pxp-dma";
 				reg = <0x020f0000 0x4000>;
 				interrupts = <0 98 0x04>;
-				clocks = <&clks 111>;
-				clock-names = "pxp-axi";
+				clocks = <&clks IMX6SL_CLK_PXP_AXI>, <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pxp-axi", "disp-axi";
 				status = "disabled";
 			};
 
@@ -686,8 +708,9 @@
 				reg = <0x020f8000 0x4000>;
 				interrupts = <0 39 0x04>;
 				clocks = <&clks IMX6SL_CLK_LCDIF_PIX>,
-					 <&clks IMX6SL_CLK_LCDIF_AXI>;
-				clock-names = "pix", "axi";
+					 <&clks IMX6SL_CLK_LCDIF_AXI>,
+					 <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pix", "axi", "disp_axi";
 				status = "disabled";
 			};
 
@@ -902,7 +925,7 @@
 		};
 	};
 
-	csi {
+	csi1 {
 		pinctrl_csi_0: csigrp-0 {
 			fsl,pins = <
 				MX6SL_PAD_EPDC_GDRL__CSI_MCLK	0x110b0

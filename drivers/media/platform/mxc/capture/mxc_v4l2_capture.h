@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -35,11 +35,11 @@
 #include <linux/pxp_dma.h>
 #include <linux/ipu-v3.h>
 #include <linux/platform_data/dma-imx.h>
-#include <linux/mipi_csi2.h>
 
 #include <media/v4l2-dev.h>
 #include <media/v4l2-int-device.h>
 
+#define CONFIG_USE_IPU2_CSI1_CAPTURE
 
 #define FRAME_NUM 10
 #define MXC_SENSOR_NUM 2
@@ -115,8 +115,6 @@ typedef struct _cam_data {
 	struct semaphore busy_lock;
 
 	int open_count;
-	struct delayed_work power_down_work;
-	int power_on;
 
 	/* params lock for this camera */
 	struct semaphore param_lock;
@@ -160,6 +158,8 @@ typedef struct _cam_data {
 
 	/* v4l2 format */
 	struct v4l2_format v2f;
+	struct v4l2_format input_fmt;	/* camera in */
+	bool bswapenable;
 	int rotation;	/* for IPUv1 and IPUv3, this means encoder rotation */
 	int vf_rotation; /* viewfinder rotation only for IPUv1 and IPUv3 */
 	struct v4l2_mxc_offset offset;
@@ -203,10 +203,6 @@ typedef struct _cam_data {
 	/* misc status flag */
 	bool overlay_on;
 	bool capture_on;
-	bool ipu_enable_csi_called;
-	bool mipi_pixelclk_enabled;
-	struct ipu_chan *ipu_chan;
-	struct ipu_chan *ipu_chan_rot;
 	int overlay_pid;
 	int capture_pid;
 	bool low_power;
@@ -226,6 +222,7 @@ typedef struct _cam_data {
 	struct v4l2_int_device *self;
 	int sensor_index;
 	void *ipu;
+	void *csi_soc;
 	enum imx_v4l2_devtype devtype;
 
 	/* v4l2 buf elements related to PxP DMA */
@@ -258,90 +255,119 @@ struct sensor_data {
 	u32 mclk;
 	u8 mclk_source;
 	struct clk *sensor_clk;
-	int ipu_id;
 	int csi;
-	unsigned mipi_camera;
-	unsigned virtual_channel;	/* Used with mipi */
 
 	void (*io_init)(void);
 };
 
+
+/*
+ * Added for PI7VD9008
+ */
+#ifndef USE_ADVANCED_PI7VD9008
+#define USE_ADVANCED_PI7VD9008 1
+#endif
+	/*! Video format structure. */
+	struct  video_fmt_t{
+		int v4l2_id;		/*!< Video for linux ID. */
+		char name[16];		/*!< Name (e.g., "NTSC", "PAL", etc.) */
+		u16 raw_width;		/*!< Raw width. */
+		u16 raw_height;		/*!< Raw height. */
+		u16 active_width;	/*!< Active width. */
+		u16 active_height;	/*!< Active height. */
+		int frame_rate;		/*!< Frame rate. */
+		u16 active_top;		/*!< Active top. */
+		u16 active_left;	/*!< Active left. */
+	};
+
+	/*! List of input video formats supported. The video formats is corresponding
+	 * with v4l2 id in video_fmt_t
+	 */
+	enum video_fmt_index{
+		PIV7D9008_NTSC = 0,		/*!< Locked on (M) NTSC video signal. */
+		PIV7D9008_PAL=1,			/*!< (B, D, G, H, I)PAL video signal. */
+		PIV7D9008_NV=2,			/*!< Not Valid. */
+		PIV7D9008_NTSC_4_43=3,		/*!< (4.43)NTSC video signal. */
+		PIV7D9008_PAL_M=4,		/*!< (M) PAL video signal. */
+		PIV7D9008_PAL_CN=5,		/*!< (CN) PAL video signal. */
+		PIV7D9008_PAL_60=6,		/*!< (60) PAL video signal. */
+		PIV7D9008_NOT_LOCKED=7,		/*!< Not locked on a signal. || ALSO AUTO DETECT IF SETTING STANDARD SELECTION */
+		PIV7D9008_FMT_IDX_SIZE
+	};
+
+	struct PIV7D9008_channel {
+		s8 brightness;					// -128 to 127 brightness range
+		s8 contrast;					// 00 to 7F
+		s8 sharpness;					// 00 No effect -> 1 to 15 (15 full effect)
+		s8 chroma_u;					// Chroma U Gain value
+		s8 chroma_v;					// Chroma V Gain Value
+		s16 saturation;
+		s8 hue;						// 7F (90C) to 80 (-90C)
+
+		u8 h_delay;					// Left Shift video output
+
+		enum video_fmt_index curr_std;			// Current Standard read from 0x0E[6:4]
+		enum video_fmt_index prev_std;			// Previous Standard read from 0x0E[6:4]
+	
+		u16 HZOOM;					// Horizontal Zoom Value (parsed between 0x68 and 0x69)
+
+	};
+
+	enum PIV7D9008_supported_channels{
+		PIV7D9008_CHANNEL_0=0,
+		PIV7D9008_CHANNEL_1=1,
+		PIV7D9008_CHANNEL_2=2,
+		PIV7D9008_CHANNEL_3=3,
+		PIV7D9008_CHANNEL_4=4,
+		PIV7D9008_CHANNEL_5=5,
+		PIV7D9008_CHANNEL_6=6,
+		PIV7D9008_CHANNEL_7=7,
+		PIV7D9008_CHANNEL_SIZE
+	};
+
+	/*
+	 * Structure taken from the mxc_v4l2_capture.h and based off of sensor
+	 *	Extended for PIV7D9008
+	 */
+	struct PIV7D9008_sensor_data {
+		const struct PIV7D9008_platform_data *platform_data;
+		struct v4l2_int_device *v4l2_int_device;
+		struct i2c_client *i2c_client;			// This is the main client
+		struct v4l2_pix_format pix;
+		struct v4l2_captureparm streamcap;
+		bool on;
+
+		/* control settings */
+		struct PIV7D9008_channel channel[PIV7D9008_CHANNEL_SIZE];
+
+		/* IPU/CSI Specific Data */
+		u32 mclk;
+		u8 mclk_source;
+		struct clk *sensor_clk;
+		u32 csi;			// csi_id
+		u32 ipu_id;			// ipu_id
+
+		void (*io_init)(void);
+
+		/* controls */
+		struct v4l2_ctrl *detect_tx_5v_ctrl;
+		struct v4l2_ctrl *analog_sampling_phase_ctrl;
+		struct v4l2_ctrl *free_run_color_manual_ctrl;
+		struct v4l2_ctrl *free_run_color_ctrl;
+		struct v4l2_ctrl *rgb_quantization_range_ctrl;
+
+		v4l2_std_id std_id;
+		int pwn_gpio;
+		int rst_gpio;
+		int prev_sysclk;
+
+		/* Custom Additions */
+		//enum PIV7D9008_mode mode;
+		//enum PIV7D9008_frame_rate frate;
+		//const struct PIV7D9008_video_standards *curr_vid_std;	// Pointer to the complete list of videostandards.  
+		//u32 curr_vid_std_index;
+		//u32 curr_vid_std_size;
+	};
+
 void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
-void mxc_camera_common_lock(void);
-void mxc_camera_common_unlock(void);
-
-static inline int cam_ipu_enable_csi(cam_data *cam)
-{
-	int ret = ipu_enable_csi(cam->ipu, cam->csi);
-	if (!ret)
-		cam->ipu_enable_csi_called = 1;
-	return ret;
-}
-
-static inline int cam_ipu_disable_csi(cam_data *cam)
-{
-	if (!cam->ipu_enable_csi_called)
-		return 0;
-	cam->ipu_enable_csi_called = 0;
-	return ipu_disable_csi(cam->ipu, cam->csi);
-}
-
-static inline int cam_mipi_csi2_enable(cam_data *cam, struct mipi_fields *mf)
-{
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	struct sensor_data *sensor;
-
-	if (!cam->sensor)
-		return 0;
-	sensor = cam->sensor->priv;
-	if (!sensor)
-		return 0;
-	if (!sensor->mipi_camera)
-		return 0;
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (!mipi_csi2_info) {
-//		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
-//		       __func__, __FILE__);
-//		return -EPERM;
-		return 0;
-	}
-	if (mipi_csi2_get_status(mipi_csi2_info)) {
-		mf->en = true;
-		mf->vc = 0;//sensor->virtual_channel;
-		mf->id = mipi_csi2_get_datatype(mipi_csi2_info);
-		if (!mipi_csi2_pixelclk_enable(mipi_csi2_info))
-			cam->mipi_pixelclk_enabled = 1;
-		return 0;
-	}
-	mf->en = false;
-	mf->vc = 0;
-	mf->id = 0;
-#endif
-	return 0;
-}
-
-static inline int cam_mipi_csi2_disable(cam_data *cam)
-{
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-
-	if (!cam->mipi_pixelclk_enabled)
-		return 0;
-	cam->mipi_pixelclk_enabled = 0;
-
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (!mipi_csi2_info) {
-//		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
-//		       __func__, __FILE__);
-//		return -EPERM;
-		return 0;
-	}
-	if (mipi_csi2_get_status(mipi_csi2_info))
-		mipi_csi2_pixelclk_disable(mipi_csi2_info);
-#endif
-	return 0;
-}
 #endif				/* __MXC_V4L2_CAPTURE_H__ */

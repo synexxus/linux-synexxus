@@ -1,7 +1,7 @@
 /*
  * Fast Ethernet Controller (ENET) PTP driver for MX6x.
  *
- * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -130,12 +130,12 @@ static int fec_ptp_insert(struct fec_ptp_circular *ptp_buf,
 {
 	struct fec_ptp_ts_data *tmp;
 
-	if (fec_ptp_is_full(ptp_buf))
-		ptp_buf->end = fec_ptp_calc_index(ptp_buf->size,
-						ptp_buf->end, 1);
-
 	tmp = (ptp_buf->data_buf + ptp_buf->end);
 	memcpy(tmp, data, sizeof(struct fec_ptp_ts_data));
+	if (fec_ptp_is_full(ptp_buf))
+		/* drop one in front */
+		ptp_buf->front =
+			fec_ptp_calc_index(ptp_buf->size, ptp_buf->front, 1);
 	ptp_buf->end = fec_ptp_calc_index(ptp_buf->size, ptp_buf->end, 1);
 
 	return 0;
@@ -186,7 +186,6 @@ static int fec_ptp_find_and_remove(struct fec_ptp_circular *ptp_buf,
 		return 1;
 	}
 	*ts = (ptp_buf->data_buf + i)->ts;
-	ptp_buf->front = fec_ptp_calc_index(size, ptp_buf->front, 1);
 
 	return 0;
 }
@@ -220,6 +219,8 @@ void fec_ptp_stop(struct net_device *ndev)
 
 	writel(0, priv->hwp + FEC_ATIME_CTRL);
 	writel(FEC_T_CTRL_RESTART, priv->hwp + FEC_ATIME_CTRL);
+
+	del_timer_sync(&priv->time_keep);
 }
 
 static void fec_get_curr_cnt(struct fec_enet_private *priv,
@@ -227,6 +228,8 @@ static void fec_get_curr_cnt(struct fec_enet_private *priv,
 {
 	u32 tempval, old_sec;
 	u32 timeout_event, timeout_ts = 0;
+	const struct platform_device_id *id_entry =
+			platform_get_device_id(priv->pdev);
 
 	do {
 		old_sec = priv->prtc;
@@ -235,7 +238,8 @@ static void fec_get_curr_cnt(struct fec_enet_private *priv,
 		tempval = readl(priv->hwp + FEC_ATIME_CTRL);
 		tempval |= FEC_T_CTRL_CAPTURE;
 		writel(tempval, priv->hwp + FEC_ATIME_CTRL);
-
+		if (id_entry->driver_data & FEC_QUIRK_TKT210590)
+			udelay(1);
 		curr_time->rtc_time.nsec = readl(priv->hwp + FEC_ATIME);
 
 		while (readl(priv->hwp + FEC_IEVENT) & FEC_ENET_TS_TIMER) {
@@ -468,8 +472,7 @@ static void fec_handle_ptpdrift(struct fec_enet_private *priv,
 	struct ptp_set_comp *comp, struct ptp_time_correct *ptc)
 {
 	u32 ndrift;
-	u32 i, adj_inc, adj_period;
-	u32 tmp_current, tmp_winner;
+	u32 i;
 	u32 ptp_ts_clk, ptp_inc;
 
 	ptp_ts_clk = clk_get_rate(priv->clk_ptp);
@@ -481,44 +484,30 @@ static void fec_handle_ptpdrift(struct fec_enet_private *priv,
 		ptc->corr_inc = 0;
 		ptc->corr_period = 0;
 		return;
-	} else if (ndrift >= ptp_ts_clk) {
-		ptc->corr_inc = (u32)(ndrift / ptp_ts_clk);
+	}
+
+	for (i = 1; i <= ptp_inc; i++) {
+		if (((i * FEC_T_PERIOD_ONE_SEC) / ndrift) > ptp_inc) {
+			ptc->corr_inc = i;
+			ptc->corr_period = ((i * FEC_T_PERIOD_ONE_SEC) /
+						(ptp_inc * ndrift));
+			break;
+		}
+	}
+
+	/* not found ? */
+	if (i > ptp_inc) {
+		/*
+		 * set it to high value - double speed
+		 * correct in every clock step.
+		 */
+		ptc->corr_inc = ptp_inc;
 		ptc->corr_period = 1;
-		return;
-	} else {
-		tmp_winner = 0xFFFFFFFF;
-		adj_inc = 1;
-
-		if (ndrift > (ptp_ts_clk / ptp_inc)) {
-			adj_inc = ptp_inc / FEC_PTP_SPINNER_2;
-		} else if (ndrift > (ptp_ts_clk /
-			(ptp_inc * FEC_PTP_SPINNER_4))) {
-			adj_inc = ptp_inc / FEC_PTP_SPINNER_4;
-			adj_period = FEC_PTP_SPINNER_2;
-		} else {
-			adj_inc = FEC_PTP_SPINNER_4;
-			adj_period = FEC_PTP_SPINNER_4;
-		}
-
-		for (i = 1; i < adj_inc; i++) {
-			tmp_current = (ptp_ts_clk * i) % ndrift;
-			if (tmp_current == 0) {
-				ptc->corr_inc = i;
-				ptc->corr_period = (u32)((ptp_ts_clk *
-						adj_period * i)	/ ndrift);
-				break;
-			} else if (tmp_current < tmp_winner) {
-				ptc->corr_inc = i;
-				ptc->corr_period = (u32)((ptp_ts_clk *
-						adj_period * i)	/ ndrift);
-				tmp_winner = tmp_current;
-			}
-		}
 	}
 }
 
 static void fec_set_drift(struct fec_enet_private *priv,
-			  struct ptp_set_comp *comp)
+			struct ptp_set_comp *comp)
 {
 	struct ptp_time_correct	tc;
 	u32 tmp, corr_ns;
@@ -553,12 +542,15 @@ static cycle_t fec_ptp_read(const struct cyclecounter *cc)
 {
 	struct fec_enet_private *fep =
 		container_of(cc, struct fec_enet_private, cc);
+	const struct platform_device_id *id_entry =
+			platform_get_device_id(fep->pdev);
 	u32 tempval;
 
 	tempval = readl(fep->hwp + FEC_ATIME_CTRL);
 	tempval |= FEC_T_CTRL_CAPTURE;
 	writel(tempval, fep->hwp + FEC_ATIME_CTRL);
-
+	if (id_entry->driver_data & FEC_QUIRK_TKT210590)
+		udelay(1);
 	return readl(fep->hwp + FEC_ATIME);
 }
 
@@ -606,6 +598,9 @@ void fec_ptp_start_cyclecounter(struct net_device *ndev)
 	timecounter_init(&fep->tc, &fep->cc, ktime_to_ns(ktime_get_real()));
 
 	spin_unlock_irqrestore(&fep->tmreg_lock, flags);
+
+	if (!timer_pending(&fep->time_keep) && fep->opened)
+		add_timer(&fep->time_keep);
 }
 
 /**
@@ -827,11 +822,14 @@ int fec_ptp_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 		if (0 != copy_from_user(&p_ts.ident,
 			&p_ts_user->ident, sizeof(p_ts.ident)))
 			return -EINVAL;
-		retval = fec_ptp_find_and_remove(&fep->rx_timestamps,
-				&p_ts.ident, &rx_time);
-		if (retval == 0 &&
-			copy_to_user((void __user *)(&p_ts_user->ts),
-				&rx_time, sizeof(rx_time)))
+
+		if (fec_ptp_find_and_remove(&fep->rx_timestamps,
+			&p_ts.ident, &rx_time)) {
+			usleep_range(4000, 5000);
+			return -EAGAIN;
+		}
+		if (copy_to_user((void __user *)(&p_ts_user->ts),
+			&rx_time, sizeof(rx_time)))
 			return -EFAULT;
 		break;
 	case PTP_GET_TX_TIMESTAMP:
@@ -839,12 +837,15 @@ int fec_ptp_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 		if (0 != copy_from_user(&p_ts.ident,
 			&p_ts_user->ident, sizeof(p_ts.ident)))
 			return -EINVAL;
-		retval = fec_ptp_find_and_remove(&fep->tx_timestamps,
-				&p_ts.ident, &tx_time);
-		if (retval == 0 &&
-			copy_to_user((void __user *)(&p_ts_user->ts),
-				&tx_time, sizeof(tx_time)))
-			retval = -EFAULT;
+
+		if (fec_ptp_find_and_remove(&fep->tx_timestamps,
+			&p_ts.ident, &tx_time)) {
+			usleep_range(4000, 5000);
+			return -EAGAIN;
+		}
+		if (copy_to_user((void __user *)(&p_ts_user->ts),
+			&tx_time, sizeof(tx_time)))
+			return -EFAULT;
 		break;
 	case PTP_GET_CURRENT_TIME:
 		fec_get_curr_cnt(fep, &curr_time);
@@ -943,7 +944,6 @@ void fec_ptp_init(struct platform_device *pdev)
 	fep->time_keep.data = (unsigned long)fep;
 	fep->time_keep.function = fec_time_keep;
 	fep->time_keep.expires = jiffies + HZ;
-	add_timer(&fep->time_keep);
 
 	fep->ptp_clock = ptp_clock_register(&fep->ptp_caps, &pdev->dev);
 	if (IS_ERR(fep->ptp_clock)) {

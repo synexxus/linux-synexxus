@@ -1,0 +1,1 @@
+cmd_drivers/net/wireless/iwlwifi/dvm/iwldvm.ko := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/jreep/OSys/kernel/freescale/fsl-linux-2.6/scripts/module-common.lds --build-id  -o drivers/net/wireless/iwlwifi/dvm/iwldvm.ko drivers/net/wireless/iwlwifi/dvm/iwldvm.o drivers/net/wireless/iwlwifi/dvm/iwldvm.mod.o

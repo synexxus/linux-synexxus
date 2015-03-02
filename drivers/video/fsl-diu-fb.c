@@ -58,6 +58,20 @@
 static struct fb_videomode fsl_diu_mode_db[] = {
 	{
 		.refresh	= 60,
+		.xres		= 1280,
+		.yres		= 800,
+		.pixclock	= 14065,
+		.left_margin	= 40,
+		.right_margin	= 40,
+		.upper_margin	= 3,
+		.lower_margin	= 80,
+		.hsync_len	= 10,
+		.vsync_len	= 10,
+		.sync		= FB_SYNC_COMP_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		.vmode		= FB_VMODE_NONINTERLACED
+	},
+	{
+		.refresh	= 60,
 		.xres		= 1024,
 		.yres		= 768,
 		.pixclock	= 15385,

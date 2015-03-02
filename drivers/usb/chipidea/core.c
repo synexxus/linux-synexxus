@@ -23,7 +23,7 @@
  * - BUS:    bus glue code, bus abstraction layer
  *
  * Compile Options
- * - CONFIG_USB_GADGET_DEBUG_FILES: enable debug facilities
+ * - CONFIG_USB_CHIPIDEA_DEBUG: enable debug facilities
  * - STALL_IN:  non-empty bulk-in pipes cannot be halted
  *              if defined mass storage compliance succeeds but with warnings
  *              => case 4: Hi >  Dn
@@ -42,10 +42,6 @@
  * - Not Supported: 15 & 16 (ISO)
  *
  * TODO List
- * - OTG
- * - Interrupt Traffic
- * - GET_STATUS(device) - always reports 0
- * - Gadget API (majority of optional features)
  * - Suspend & Remote Wakeup
  */
 #include <linux/delay.h>
@@ -64,6 +60,7 @@
 #include <linux/usb/otg.h>
 #include <linux/usb/chipidea.h>
 #include <linux/usb/of.h>
+#include <linux/of.h>
 #include <linux/phy.h>
 #include <linux/regulator/consumer.h>
 
@@ -73,6 +70,7 @@
 #include "host.h"
 #include "debug.h"
 #include "otg.h"
+#include "otg_fsm.h"
 
 /* Controller register map */
 static uintptr_t ci_regs_nolpm[] = {
@@ -143,6 +141,26 @@ static int hw_alloc_regmap(struct ci_hdrc *ci, bool is_lpm)
 			 : ci_regs_nolpm[OP_ENDPTCTRL]);
 
 	return 0;
+}
+
+/**
+ * hw_read_intr_enable: returns interrupt enable register
+ *
+ * This function returns register data
+ */
+u32 hw_read_intr_enable(struct ci_hdrc *ci)
+{
+	return hw_read(ci, OP_USBINTR, ~0);
+}
+
+/**
+ * hw_read_intr_status: returns interrupt status register
+ *
+ * This function returns register data
+ */
+u32 hw_read_intr_status(struct ci_hdrc *ci)
+{
+	return hw_read(ci, OP_USBSTS, ~0);
 }
 
 /**
@@ -288,6 +306,43 @@ static void hw_phymode_configure(struct ci_hdrc *ci)
 }
 
 /**
+ * ci_usb_phy_init: initialize phy according to different phy type
+ * @ci: the controller
+  *
+ * This function returns an error code if usb_phy_init has failed
+ */
+static int ci_usb_phy_init(struct ci_hdrc *ci)
+{
+	int ret;
+
+	switch (ci->platdata->phy_mode) {
+	case USBPHY_INTERFACE_MODE_UTMI:
+	case USBPHY_INTERFACE_MODE_UTMIW:
+	case USBPHY_INTERFACE_MODE_HSIC:
+		ret = usb_phy_init(ci->transceiver);
+		if (!ret)
+			hw_wait_phy_stable();
+		else
+			return ret;
+		hw_phymode_configure(ci);
+		break;
+	case USBPHY_INTERFACE_MODE_ULPI:
+	case USBPHY_INTERFACE_MODE_SERIAL:
+		hw_phymode_configure(ci);
+		ret = usb_phy_init(ci->transceiver);
+		if (ret)
+			return ret;
+		break;
+	default:
+		ret = usb_phy_init(ci->transceiver);
+		if (!ret)
+			hw_wait_phy_stable();
+	}
+
+	return ret;
+}
+
+/**
  * hw_device_reset: resets chip (execute without interruption)
  * @ci: the controller
   *
@@ -309,6 +364,13 @@ int hw_device_reset(struct ci_hdrc *ci, u32 mode)
 
 	if (ci->platdata->flags & CI_HDRC_DISABLE_STREAMING)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
+
+	if (ci->platdata->flags & CI_HDRC_FORCE_FULLSPEED) {
+		if (ci->hw_bank.lpm)
+			hw_write(ci, OP_DEVLC, DEVLC_PFSC, DEVLC_PFSC);
+		else
+			hw_write(ci, OP_PORTSC, PORTSC_PFSC, PORTSC_PFSC);
+	}
 
 	/* USBMODE should be configured step by step */
 	hw_write(ci, OP_USBMODE, USBMODE_CM, USBMODE_CM_IDLE);
@@ -370,8 +432,14 @@ static irqreturn_t ci_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	if (ci->is_otg)
-		otgsc = hw_read(ci, OP_OTGSC, ~0);
+	if (ci->is_otg) {
+		otgsc = hw_read_otgsc(ci, ~0);
+		if (ci_otg_is_fsm_mode(ci)) {
+			ret = ci_otg_fsm_irq(ci);
+			if (ret == IRQ_HANDLED)
+				return ret;
+		}
+	}
 
 	/*
 	 * Handle id change interrupt, it indicates device/host function
@@ -379,9 +447,8 @@ static irqreturn_t ci_irq(int irq, void *data)
 	 */
 	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
 		ci->id_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_IDIS);
-		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
+		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
+		ci_otg_queue_work(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -390,10 +457,9 @@ static irqreturn_t ci_irq(int irq, void *data)
 	 * and disconnection events.
 	 */
 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
-		ci->b_sess_valid_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_BSVIS);
-		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
+		ci->vbus_glitch_check_event = true;
+		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
+		ci_otg_queue_work(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -430,6 +496,9 @@ static int ci_get_platdata(struct device *dev,
 			return PTR_ERR(platdata->reg_vbus);
 		}
 	}
+
+	if (of_usb_get_maximum_speed(dev->of_node) == USB_SPEED_FULL)
+		platdata->flags |= CI_HDRC_FORCE_FULLSPEED;
 
 	return 0;
 }
@@ -537,41 +606,55 @@ static void ci_get_otg_capable(struct ci_hdrc *ci)
 					== (DCCPARAMS_DC | DCCPARAMS_HC));
 	if (ci->is_otg) {
 		dev_dbg(ci->dev, "It is OTG capable controller\n");
-		ci_disable_otg_interrupt(ci, OTGSC_INT_EN_BITS);
-		ci_clear_otg_interrupt(ci, OTGSC_INT_STATUS_BITS);
+		hw_write_otgsc(ci, OTGSC_INT_EN_BITS | OTGSC_INT_STATUS_BITS,
+							OTGSC_INT_STATUS_BITS);
 	}
 }
 
-static int ci_usb_phy_init(struct ci_hdrc *ci)
+static enum ci_role ci_get_role(struct ci_hdrc *ci)
 {
-	int ret;
-
-	if (ci->platdata->phy) {
-		ci->transceiver = ci->platdata->phy;
-		ret = usb_phy_init(ci->transceiver);
-		if (!ret)
-			hw_wait_phy_stable();
-		return ret;
+	if (ci->roles[CI_ROLE_HOST] && ci->roles[CI_ROLE_GADGET]) {
+		if (ci->is_otg) {
+			hw_write_otgsc(ci, OTGSC_IDIE, OTGSC_IDIE);
+			return ci_otg_role(ci);
+		} else {
+			/*
+			 * If the controller is not OTG capable, but support
+			 * role switch, the defalt role is gadget, and the
+			 * user can switch it through debugfs.
+			 */
+			return CI_ROLE_GADGET;
+		}
 	} else {
-		ci->global_phy = true;
-		ci->transceiver = usb_get_phy(USB_PHY_TYPE_USB2);
-		if (IS_ERR(ci->transceiver))
-			ci->transceiver = NULL;
-
-		return 0;
+		return ci->roles[CI_ROLE_HOST]
+			? CI_ROLE_HOST
+			: CI_ROLE_GADGET;
 	}
 }
 
-static void ci_usb_phy_destroy(struct ci_hdrc *ci)
+static void ci_start_new_role(struct ci_hdrc *ci)
 {
-	if (!ci->transceiver)
-		return;
+	enum ci_role role = ci_get_role(ci);
 
-	otg_set_peripheral(ci->transceiver->otg, NULL);
-	if (ci->global_phy)
-		usb_put_phy(ci->transceiver);
+	if (ci->role != role)
+		ci_handle_id_switch(ci);
+
+	if (role == CI_ROLE_GADGET)
+		ci_handle_vbus_connected(ci);
+}
+
+static void ci_power_lost_work(struct work_struct *work)
+{
+	struct ci_hdrc *ci = container_of(work, struct ci_hdrc,
+						power_lost_work);
+
+	pm_runtime_get_sync(ci->dev);
+	if (ci_otg_is_fsm_mode(ci))
+		ci_hdrc_otg_fsm_restart(ci);
 	else
-		usb_phy_shutdown(ci->transceiver);
+		ci_start_new_role(ci);
+	pm_runtime_put_sync(ci->dev);
+	enable_irq(ci->irq);
 }
 
 static int ci_hdrc_probe(struct platform_device *pdev)
@@ -583,7 +666,7 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	int		ret;
 	enum usb_dr_mode dr_mode;
 
-	if (!dev->platform_data) {
+	if (!dev_get_platdata(dev)) {
 		dev_err(dev, "platform data missing\n");
 		return -ENODEV;
 	}
@@ -600,7 +683,7 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci->dev = dev;
-	ci->platdata = dev->platform_data;
+	ci->platdata = dev_get_platdata(dev);
 	ci->imx28_write_fix = !!(ci->platdata->flags &
 		CI_HDRC_IMX28_WRITE_FIX);
 
@@ -608,6 +691,25 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(dev, "can't initialize hardware\n");
 		return -ENODEV;
+	}
+
+	if (ci->platdata->phy)
+		ci->transceiver = ci->platdata->phy;
+	else
+		ci->transceiver = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);
+
+	if (IS_ERR(ci->transceiver)) {
+		ret = PTR_ERR(ci->transceiver);
+		/*
+		 * if -ENXIO is returned, it means PHY layer wasn't
+		 * enabled, so it makes no sense to return -EPROBE_DEFER
+		 * in that case, since no PHY driver will ever probe.
+		 */
+		if (ret == -ENXIO)
+			return ret;
+
+		dev_err(dev, "no usb2 phy configured\n");
+		return -EPROBE_DEFER;
 	}
 
 	ret = ci_usb_phy_init(ci);
@@ -621,13 +723,11 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	ci->irq = platform_get_irq(pdev, 0);
 	if (ci->irq < 0) {
 		dev_err(dev, "missing IRQ\n");
-		ret = -ENODEV;
-		goto destroy_phy;
+		ret = ci->irq;
+		goto deinit_phy;
 	}
 
 	ci_get_otg_capable(ci);
-
-	hw_phymode_configure(ci);
 
 	dr_mode = ci->platdata->dr_mode;
 
@@ -645,23 +745,12 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 		ret = ci_hdrc_gadget_init(ci);
 		if (ret)
 			dev_info(dev, "doesn't support gadget\n");
-		if (!ret && ci->transceiver) {
-			ret = otg_set_peripheral(ci->transceiver->otg,
-							&ci->gadget);
-			/*
-			 * If we implement all USB functions using chipidea drivers,
-			 * it doesn't need to call above API, meanwhile, if we only
-			 * use gadget function, calling above API is useless.
-			 */
-			if (ret && ret != -ENOTSUPP)
-				goto destroy_phy;
-		}
 	}
 
 	if (!ci->roles[CI_ROLE_HOST] && !ci->roles[CI_ROLE_GADGET]) {
 		dev_err(dev, "no supported roles\n");
 		ret = -ENODEV;
-		goto destroy_phy;
+		goto deinit_phy;
 	}
 
 	if (ci->is_otg) {
@@ -672,32 +761,18 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (ci->roles[CI_ROLE_HOST] && ci->roles[CI_ROLE_GADGET]) {
-		if (ci->is_otg) {
-			ci->role = ci_otg_role(ci);
-			ci_enable_otg_interrupt(ci, OTGSC_IDIE);
-		} else {
-			/*
-			 * If the controller is not OTG capable, but support
-			 * role switch, the defalt role is gadget, and the
-			 * user can switch it through debugfs.
-			 */
-			ci->role = CI_ROLE_GADGET;
-		}
-	} else {
-		ci->role = ci->roles[CI_ROLE_HOST]
-			? CI_ROLE_HOST
-			: CI_ROLE_GADGET;
-	}
-
+	ci->role = ci_get_role(ci);
 	/* Notify vbus connected event if it is existed */
 	if (ci->role == CI_ROLE_GADGET)
 		ci_handle_vbus_connected(ci);
 
-	ret = ci_role_start(ci, ci->role);
-	if (ret) {
-		dev_err(dev, "can't start %s role\n", ci_role(ci)->name);
-		goto stop;
+	if (!ci_otg_is_fsm_mode(ci)) {
+		ret = ci_role_start(ci, ci->role);
+		if (ret) {
+			dev_err(dev, "can't start %s role\n",
+						ci_role(ci)->name);
+			goto stop;
+		}
 	}
 
 	platform_set_drvdata(pdev, ci);
@@ -713,6 +788,12 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 		pm_runtime_enable(&pdev->dev);
 	}
 
+	if (ci_otg_is_fsm_mode(ci))
+		ci_hdrc_otg_fsm_start(ci);
+
+	/* Init workqueue for controller power lost handling */
+	INIT_WORK(&ci->power_lost_work, ci_power_lost_work);
+
 	setup_timer(&ci->timer, delay_runtime_pm_put_timer,
 			(unsigned long)ci);
 	ret = dbg_create_files(ci);
@@ -722,8 +803,8 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	free_irq(ci->irq, ci);
 stop:
 	ci_role_destroy(ci);
-destroy_phy:
-	ci_usb_phy_destroy(ci);
+deinit_phy:
+	usb_phy_shutdown(ci->transceiver);
 
 	return ret;
 }
@@ -737,17 +818,49 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 		pm_runtime_disable(&pdev->dev);
 		pm_runtime_put_noidle(&pdev->dev);
 	}
+	del_timer_sync(&ci->timer);
 	dbg_remove_files(ci);
 	free_irq(ci->irq, ci);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
-	ci_usb_phy_destroy(ci);
+	usb_phy_shutdown(ci->transceiver);
 	kfree(ci->hw_bank.regmap);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
+/* Prepare wakeup by SRP before suspend */
+static void ci_otg_fsm_suspend_for_srp(struct ci_hdrc *ci)
+{
+	if ((ci->transceiver->state == OTG_STATE_A_IDLE) &&
+				!hw_read_otgsc(ci, OTGSC_ID)) {
+		hw_write(ci, OP_PORTSC, PORTSC_W1C_BITS | PORTSC_PP,
+								PORTSC_PP);
+		hw_write(ci, OP_PORTSC, PORTSC_W1C_BITS | PORTSC_WKCN,
+								PORTSC_WKCN);
+	}
+}
+
+/* Handle SRP when wakeup by data pulse */
+static void ci_otg_fsm_wakeup_by_srp(struct ci_hdrc *ci)
+{
+	/*
+	 * if a_idle wakeup by data pulse,
+	 * handle it like normal SRP
+	 */
+	if ((ci->transceiver->state == OTG_STATE_A_IDLE) &&
+		(ci->fsm.a_bus_drop == 1) && (ci->fsm.a_bus_req == 0)) {
+		if (!hw_read_otgsc(ci, OTGSC_ID)) {
+			ci->fsm.a_srp_det = 1;
+			ci->fsm.a_bus_drop = 0;
+			ci_otg_queue_work(ci);
+		} else {
+			ci->fsm.id = 1;
+		}
+	}
+}
+
 static int ci_controller_suspend(struct device *dev)
 {
 	struct ci_hdrc *ci = dev_get_drvdata(dev);
@@ -756,6 +869,16 @@ static int ci_controller_suspend(struct device *dev)
 
 	if (ci->in_lpm)
 		return 0;
+
+	/*
+	 * The registers for suspended host will not be updated
+	 * during system suspend.
+	 */
+	if (ci->roles[ci->role]->save)
+		ci->roles[ci->role]->save(ci);
+
+	if (ci_otg_is_fsm_mode(ci))
+		ci_otg_fsm_suspend_for_srp(ci);
 
 	disable_irq(ci->irq);
 
@@ -797,6 +920,8 @@ static int ci_controller_resume(struct device *dev)
 		ci->wakeup_int = false;
 		enable_irq(ci->irq);
 		mod_timer(&ci->timer, jiffies + msecs_to_jiffies(2000));
+		if (ci_otg_is_fsm_mode(ci))
+			ci_otg_fsm_wakeup_by_srp(ci);
 	}
 
 	return 0;
@@ -807,6 +932,15 @@ static int ci_suspend(struct device *dev)
 {
 	struct ci_hdrc *ci = dev_get_drvdata(dev);
 	int ret;
+
+	/*
+	 * Controller needs to be active during suspend, otherwise the core
+	 * may run resume when the parent is at suspend if other driver's
+	 * suspend fails, it occurs before parent's suspend has not started,
+	 * but the core suspend has finished.
+	 */
+	if (ci->in_lpm)
+		pm_runtime_resume(dev);
 
 	ret = ci_controller_suspend(dev);
 	if (ret)
@@ -822,12 +956,35 @@ static int ci_resume(struct device *dev)
 {
 	struct ci_hdrc *ci = dev_get_drvdata(dev);
 	int ret;
+	bool power_lost = false;
+	u32 sample_reg_val;
+
+	/* Check if controller resume from power lost */
+	sample_reg_val = hw_read(ci, OP_ENDPTLISTADDR, ~0);
+	if (sample_reg_val == 0)
+		power_lost = true;
+	else if (sample_reg_val == 0xFFFFFFFF)
+		/* Restore value 0 if it was set for power lost check */
+		hw_write(ci, OP_ENDPTLISTADDR, ~0, 0);
 
 	if (device_may_wakeup(dev))
 		disable_irq_wake(ci->irq);
 
 	ret = ci_controller_resume(dev);
-	if (!ret && ci->supports_runtime_pm) {
+	if (ret)
+		return ret;
+
+	if (power_lost) {
+		/* re-init for phy */
+		usb_phy_shutdown(ci->transceiver);
+		ci_usb_phy_init(ci);
+		if (ci->roles[ci->role]->restore)
+			ci->roles[ci->role]->restore(ci);
+		disable_irq_nosync(ci->irq);
+		schedule_work(&ci->power_lost_work);
+	}
+
+	if (ci->supports_runtime_pm) {
 		pm_runtime_disable(dev);
 		pm_runtime_set_active(dev);
 		pm_runtime_enable(dev);
@@ -861,6 +1018,7 @@ static struct platform_driver ci_hdrc_driver = {
 	.driver	= {
 		.name	= "ci_hdrc",
 		.pm	= &ci_pm_ops,
+		.owner	= THIS_MODULE,
 	},
 };
 

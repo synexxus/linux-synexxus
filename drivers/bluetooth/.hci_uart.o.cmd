@@ -1,0 +1,1 @@
+cmd_drivers/bluetooth/hci_uart.o := /opt/gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/bluetooth/hci_uart.o drivers/bluetooth/hci_ldisc.o drivers/bluetooth/hci_ll.o 
