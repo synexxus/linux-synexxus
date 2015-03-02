@@ -22,7 +22,7 @@
 
 	/ {
 	    model = "Freescale i.MX6 Quad Aristeus Board";
-	    compatible = "fsl,imx6q-aristeus", "fsl,imx6q";
+	    compatible = "fsl,imx6qdl-aristeus", "fsl,imx6q";
 	};
 
 	&mxcfb1 {

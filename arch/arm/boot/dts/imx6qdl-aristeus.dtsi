@@ -76,6 +76,7 @@
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
+		regulator-always-on;	/*12 16 2014: Added always on!*/
 		gpio = <&gpio4 15 0>; /* USB_OTG_PWR_EN */
 		enable-active-high;
 	};
