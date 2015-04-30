@@ -230,8 +230,6 @@
     pinctrl-names = "default";
     pinctrl-0 = <&pinctrl_i2c1_1>;
     status = "okay";
-
-
 };
 
 
@@ -240,6 +238,25 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2_2>;
 	status = "okay";
+
+	adv7604_camera: adv7604_camera@20 { /* i2c1 driver */
+		compatible = "adv,adv7604_camera";
+		reg = <0x20>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu2_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&sw2_reg>; /* 3.3v */
+		AVDD-supply = <&vgen4_reg>;  /* 1.8v */
+		DVDD-supply = <&sw2_reg>;  /* 1.8v */
+		pwn-gpios = <&gpio6 9 1>;   /* Not True */
+		rst-gpios = <&gpio1 4 0>;   /* Reset Signal */
+		ipu_id = <1>;
+		csi_id = <1>;
+		//mclk = <24000000>;		// Gated Mode
+		mclk = <0>;			// BT.656
+		mclk_source = <0>;
+	};
 
 	hdmi: edid@50 {
 		compatible = "fsl,imx6-hdmi-i2c";

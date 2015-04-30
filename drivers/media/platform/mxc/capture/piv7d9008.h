@@ -439,6 +439,18 @@
 	 	.active_top = 0,
 	 	.active_left = 0,
 		 },
+		{			/*! Quad Capture */
+		 .v4l2_id = V4L2_STD_ALL,
+		 .name = "Quad Save NTSC",
+		 .raw_width = 720*4,
+		 .raw_height = 525*4,
+		 .active_width = 720*4,
+		 .active_height = 480*4,
+		 .frame_rate = 30,
+	 	 .active_top = 0,
+	 	 .active_left = 0,
+		 },
+
 	};
 
 /*

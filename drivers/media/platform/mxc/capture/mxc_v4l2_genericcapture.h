@@ -346,7 +346,6 @@ struct sensor_data {
 		struct clk *sensor_clk;
 		u32 csi;			// csi_id
 		u32 ipu_id;			// ipu_id
-		u32 vid_msb;
 
 		void (*io_init)(void);
 

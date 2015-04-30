@@ -429,8 +429,8 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-		memset(a, 0, sizeof(*a));
-		a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		//memset(a, 0, sizeof(*a));
+		//a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		cparm->capability = sensor->streamcap.capability;
 		cparm->timeperframe = sensor->streamcap.timeperframe;
 		cparm->capturemode = sensor->streamcap.capturemode;
@@ -1106,6 +1106,23 @@ static int ioctl_dev_exit(struct v4l2_int_device *s)
 }
 
 /***********************************************************************
+ * PRIVATE IOCTL FUNCTIONS FOR THIS MXC Capture Group
+ ***********************************************************************/
+// Added for Version 0.1
+static int ioctl_priv_process_buf(struct v4l2_int_device *s, struct v4l2_buffer *buf){
+	int i = 0;
+	//u32 *bufp = &buf->m.offset;	/* This is the pointer in memory to the start of the buffer*/
+	//u32 diff = 0;
+	//diff = DEFAULT_HW_CSI_CAPTURE_MSB - PIV7D9008_data.vid_msb;	//19 - 15 = 4;
+	//diff = 19 - PIV7D9008_data.vid_msb;	//19 - 15 = 4;
+
+	//for(i=0; i < buf->bytesused; i++){
+	//	buf->m.offset[i] = buf->m.offset[i] << diff;
+	//}
+	return i;
+}
+
+/***********************************************************************
  * MXC V4l2 Device Driver Section.
  ***********************************************************************/
 
@@ -1130,6 +1147,7 @@ static struct v4l2_int_ioctl_desc PIV7D9008_ioctl_desc[] = {
 	{ vidioc_int_enum_framesizes_num,	(v4l2_int_ioctl_func *)ioctl_enum_framesizes },
 	{ vidioc_int_enum_frameintervals_num,	(v4l2_int_ioctl_func *)ioctl_enum_frameintervals },
 	{ vidioc_int_g_chip_ident_num,		(v4l2_int_ioctl_func *)ioctl_g_chip_ident },
+	{ vidioc_int_priv_process_buf,		(v4l2_int_ioctl_func *)ioctl_priv_process_buf },
 };
 
 static struct v4l2_int_slave PIV7D9008_slave = {
@@ -1189,149 +1207,6 @@ static int piv7d9008_write_reg(u8 reg, u8 val)
 			reg, val);
 		return -1;
 	}
-	return 0;
-}
-
-static s32 PIV7D9008_generic_i2c_byte_read(struct i2c_client *client, u8 addr, u8 reg){
-	unsigned short temp_addr = client->addr;		// Save the address for restoration later
-	u8 au8RegBuf[1] = {0};
-	int retval = 0;
-
-	printk(KERN_DEBUG "%s: read original addr=%x\n", __func__, temp_addr);
-
-	client->addr = addr;	//set the desired address to be the client->addr field to use the normal variables
-	au8RegBuf[0] = reg;
-	//au8RegBuf[1] = reg;
-
-	retval = i2c_master_send(client, au8RegBuf, 1);
-	printk(KERN_DEBUG "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0 ) {
-		printk(KERN_ERR "%s:write reg error:addr=%x reg=%x\n",
-				__func__, addr, reg);
-		return -1;
-	}
-
-//	retval = i2c_master_recv(client, &u8RdVal, 1);
-	retval = i2c_smbus_read_byte_data(client, reg);
-	printk(KERN_INFO "%s: addr=%x reg=%x val=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0) {
-		printk(KERN_ERR "%s:read reg error:addr=%x, reg=%x, val=%x\n", __func__, (unsigned short)client->addr, reg, retval);
-		return -1;
-	}
-	client->addr = temp_addr;				// Restore the address
-	return retval;
-}
-
-/*
- *	Address to transmit to
- *	reg: starting register to read from
- *	count: number of bytes to read
- */
-static s32 my_i2c_byte_read(struct i2c_client *client, u8 addr, u8 reg, u8 count);
-static s32 my_i2c_byte_read(struct i2c_client *client, u8 addr, u8 reg, u8 count){
-	unsigned short temp_addr = client->addr;		// Save the address for restoration later
-	u8 au8RegBuf[1] = {0};
-	u8 sizeToRead = count;
-	u8 u8RdVal[count];
-	//u8 u8RdVal = 0;
-	int retval = 0;
-	for(retval = 0; retval < sizeToRead; retval++) u8RdVal[retval] = 0;
-	retval = 0;
-
-	printk(KERN_INFO "%s: read original addr=%x\n", __func__, temp_addr);
-
-	client->addr = addr;	//set the desired address to be the client->addr field to use the normal variables
-	au8RegBuf[0] = reg;
-	//au8RegBuf[1] = reg;
-
-	retval = i2c_master_send(client, au8RegBuf, 1);
-	printk(KERN_INFO "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0 ) {
-		printk(KERN_ERR "%s:write reg error:addr=%x reg=%x\n",__func__, addr, reg);
-		return -1;
-	}
-
-	msleep(5);
-	printk(KERN_INFO "%s: Master recv:addr=%x reg=%x val=%x count=%x\n",__func__, (unsigned short)client->addr, reg, u8RdVal[0], retval);
-	retval = i2c_master_recv(client, u8RdVal, sizeToRead);
-	if (retval < 0) {
-		printk(KERN_ERR "%s:read reg error:addr=%x, reg=%x, val=%x retval=%x\n", __func__, (unsigned short)client->addr, reg, u8RdVal[0],retval);
-		return -1;
-	}
-
-	for(sizeToRead=0; sizeToRead < retval; sizeToRead++){
-		printk(KERN_INFO "\t%s: val[0x%x]=0x%x\n",__func__, reg+sizeToRead, u8RdVal[sizeToRead]);
-	}
-
-	client->addr = temp_addr;				// Restore the address
-	msleep(5);
-	return u8RdVal[0];
-}
-
-static s32 PIV7D9008_i2c_byte_read(struct i2c_client *client, u8 reg){
-	u8 au8RegBuf[1] = {0};
-	u8 u8RdVal = 0;
-	int retval = 0;
-	au8RegBuf[0] = reg;
-
-	retval = i2c_master_send(client, au8RegBuf, 1);
-	printk(KERN_INFO "%s: Master send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0) {
-		pr_err("%s:ERROR write reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
-	}
-
-	retval = i2c_master_recv(client, &u8RdVal, 1);
-	printk(KERN_INFO "%s: Master recv:addr=%x reg=%x val=%x count=%x\n",__func__, (unsigned short)client->addr, reg, u8RdVal, retval);
-	if (retval < 0) {
-		pr_err("%s: ERROR read reg error:reg=%x,val=%x\n",
-				__func__, reg, u8RdVal);
-		return -1;
-	}
-
-	return u8RdVal;
-}
-
-static s32 PIV7D9008_generic_i2c_byte_write(struct i2c_client *client, u8 addr, u8 reg, u8 val){
-	unsigned short temp_addr = client->addr;		// Save the address for restoration later
-	u8 au8Buf[2] = {0};
-	int retval = 0;
-	au8Buf[0] = reg;
-	au8Buf[1] = val;
-
-	client->addr = addr;	//set the desired address to be the client->addr field to use the normal variables
-
-	printk(KERN_DEBUG "%s: write original addr=%x\n", __func__, temp_addr);
-
-	retval = i2c_master_send(client, au8Buf, 2);
-	printk(KERN_DEBUG "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0) {
-		pr_err("%s: ERROR write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
-		return -1;
-	}
-
-	client->addr = temp_addr;	//set the desired address to be the client->addr field to use the normal variables
-
-	return 0;
-
-	client->addr = temp_addr;				// Restore the address
-}
-
-static s32 PIV7D9008_i2c_byte_write(struct i2c_client *client, u8 reg, u8 val){
-	u8 au8Buf[2] = {0};
-	int retval = 0;
-	au8Buf[0] = reg;
-	au8Buf[1] = val;
-
-	retval = i2c_master_send(client, au8Buf, 2);
-	printk(KERN_INFO "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
-	if (retval < 0) {
-		pr_err("%s: ERROR write reg error:reg=%x,val=%x\n", __func__, reg, val);
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -1488,6 +1363,15 @@ static int PIV7D9008_probe(struct i2c_client *client,
 	if (retval) {
 		dev_err(dev, "csi_id invalid\n");
 		return retval;
+	}
+
+	printk(KERN_INFO "%s vid_msb search\n", __func__);
+	retval = of_property_read_u32(dev->of_node, "vid_msb", &PIV7D9008_data.vid_msb);
+	if (retval) {
+		dev_err(dev, "vid_msb invalid or not found\n");
+		// Assuming data is aligned per datasheet
+		//PIV7D9008_data.vid_msb = DEFAULT_HW_CSI_CAPTURE_MSB;
+		PIV7D9008_data.vid_msb = 19;
 	}
 
 	printk(KERN_INFO "%s all values read.  Preparing struct\n", __func__);
@@ -1706,10 +1590,10 @@ static void mxc_v4l2_PIV7D9008_i2c_clean(void)
 //module_exit(mxc_v4l2_PIV7D9008_i2c_clean);
 module_i2c_driver(PIV7D9008_i2c_driver);
 
-MODULE_AUTHOR("John Reep <john.reep@gmail.com");
+MODULE_AUTHOR("John Reep <john.reep@gmail.com>");
 MODULE_DESCRIPTION("PIV7D9008 Camera Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("1.0");
+MODULE_VERSION("1.1");
 MODULE_ALIAS("CSI");
 
 

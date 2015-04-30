@@ -30,7 +30,7 @@
 		default-brightness-level = <9>;
 
 		// This is the LVDS_PANEL_EN (DISP_PWR_EN Net)
-		// Was &gpio6 14 0 for the Highlander board
+		// Was &gpio6 14 0 for the Highlander board & on Aristeus
 		enable-gpios = <&gpio6 14 0>;
 	};
 
@@ -129,8 +129,9 @@
 
 	v4l2_cap_0 {
 		compatible = "fsl,imx6q-v4l2-capture";
-		ipu_id = <0>;
-		csi_id = <0>;
+		/* CHANGE TO 0 and 0 for PERICOM*/
+		ipu_id = <1>;
+		csi_id = <1>;
 		mclk_source = <0>;
 		status = "okay";
 	};
@@ -245,6 +246,27 @@
 	hdmi: edid@50 {
 		compatible = "fsl,imx6-hdmi-i2c";
 		reg = <0x50>;
+	};
+
+	adv7604_camera: adv7604_camera@20 { /* i2c1 driver */
+		compatible = "adv,adv7604_camera";
+		reg = <0x20>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu2_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&sw2_reg>; /* 3.3v */
+		AVDD-supply = <&vgen4_reg>;  /* 1.8v */
+		DVDD-supply = <&sw2_reg>;  /* 1.8v */
+		//pwn-gpios = <&gpio6 9 1>;   /* Not True */
+		//rst-gpios = <&gpio1 4 0>;   /* Reset Signal */
+		pwn-gpios = <&gpio5 27 1>;	/* ARISTEUS TEST BOARD POWER DOWN */
+		rst-gpios = <&gpio6 1 0>;	/* ARISTEUS TEST BOARD RESET */
+		ipu_id = <1>;
+		csi_id = <1>;
+		//mclk = <24000000>;		// Gated Mode
+		mclk = <0>;			// BT.656
+		mclk_source = <0>;
 	};
 
 	pmic: pfuze100@08 {
@@ -364,11 +386,12 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0		/* CAN STBY */
-				MX6QDL_PAD_EIM_D19__GPIO3_IO19      	0x80000000  /* spi-nor CS1 */
-				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27    	0x000b0     /* ethernet phy reset */
-				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28   	0x1b0b0     /* ethernet phy interrupt */
-				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00     	0x80000000  /* USDHC3 CD */
-				MX6QDL_PAD_GPIO_17__GPIO7_IO12      	0x0b0b0       /* USB Hub Reset */
+				MX6QDL_PAD_EIM_D19__GPIO3_IO19      	0x80000000  	/* spi-nor CS1 */
+				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27    	0x000b0     	/* ethernet phy reset */
+				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28   	0x1b0b0     	/* ethernet phy interrupt */
+				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00     	0x80000000  	/* USDHC3 CD */
+				MX6QDL_PAD_GPIO_17__GPIO7_IO12      	0x0b0b0       	/* USB Hub Reset */
+
 				>;
 		};
 	};

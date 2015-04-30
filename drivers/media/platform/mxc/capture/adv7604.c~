@@ -83,10 +83,10 @@ static struct i2c_driver adv7604_i2c_driver = {
 static inline void adv7604_power_down(int enable)
 {
 	(enable == 0 ) ? printk(KERN_INFO "%s: DISABLED\n",__func__) : printk(KERN_INFO "%s: ENABLED\n",__func__);;
-	if(&adv7604_data.pwn_gpio != NULL)
-		gpio_set_value(adv7604_data.pwn_gpio, enable);
+	//if(&adv7604_data.pwn_gpio != NULL)
+	//	gpio_set_value(adv7604_data.pwn_gpio, enable);
 
-	msleep(200);
+	msleep(400);
 }
 
 /*
@@ -120,7 +120,7 @@ static void adv7604_soft_reset(void)
 	printk(KERN_INFO "%s: \n",__func__);
 
 	/* delay at least 5ms */
-	msleep(10);
+	msleep(500);
 }
 
 /* set sensor driver capability
@@ -275,8 +275,8 @@ static int adv7604_init_default_comp(void)
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x00, 0x01);	/* Set to come up as HDMI Port B*/
 
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x00, 0x08);	/* Powerup ADC */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x01, 0x06);	/* Power up AFE */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x02, 0x01);	/* Select the AIN_SEL[2:0] 4, 5, 6.  We want ch2 or ch3*/
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x01, 0x81);	/* Simultaneous mode Power up AFE */
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x02, 0x01);	/* Select the AIN_SEL[2:0] 4, 5, 6.  We want ch5 or ch6*/
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x05, 0x07);	/* Enable all Anti-aliasing filters for ADCs */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x12, 0x7b);	/* ADI recommended write */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x0C, 0x1f);	/* ADI recommended write */
@@ -289,13 +289,15 @@ static int adv7604_init_default_comp(void)
 						0x00 | 	(adv7604_prim_mode_comp[adv7604_comp_mode_PR_2x1_525p].prim_mode) |
 						      	(adv7604_prim_mode_comp[adv7604_comp_mode_PR_2x1_525p].v_freq << 4));	// Component Mode @60Hz
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_02, 0xFF);	/* */
-	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_02, 0x80);	/* 16-bit ITU-656 mode*/
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_03, 0x80);	/* 16-bit ITU-656 mode*/
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_03, 0x00);	/* 8-bit ITU-656 mode SDR */
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_05, 0x0A);	/* DE Output, Blank and no AV codes! */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_IO_REG_15, 0xB0); /* Video output available */
 
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x3e, 0x04);	/* Power Off Macrovision */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x7B, 0x01);	/* Power Off Macrovision */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xc3, 0x39);	/* Power Off Macrovision */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xBF, 0x39);	/* Power Off Macrovision */
 
 	adv7604_data.mode = ADV7604_MODE_COMP;
 	adv7604_data.curr_vid_std = adv7604_prim_mode_comp;
@@ -1191,14 +1193,14 @@ static s32 adv7604_generic_i2c_byte_read(struct i2c_client *client, u8 addr, u8 
 	u8 au8RegBuf[1] = {0};
 	int retval = 0;
 
-	printk(KERN_DEBUG "%s: read original addr=%x\n", __func__, temp_addr);
+	printk(KERN_INFO "%s: read original addr=%x\n", __func__, temp_addr);
 
 	client->addr = addr;	//set the desired address to be the client->addr field to use the normal variables
 	au8RegBuf[0] = reg;
 	//au8RegBuf[1] = reg;
 
 	retval = i2c_master_send(client, au8RegBuf, 1);
-	printk(KERN_DEBUG "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
+	printk(KERN_INFO "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
 	if (retval < 0 ) {
 		printk(KERN_ERR "%s:write reg error:addr=%x reg=%x\n",
 				__func__, addr, reg);
@@ -1296,10 +1298,10 @@ static s32 adv7604_generic_i2c_byte_write(struct i2c_client *client, u8 addr, u8
 
 	client->addr = addr;	//set the desired address to be the client->addr field to use the normal variables
 
-	printk(KERN_DEBUG "%s: write original addr=%x\n", __func__, temp_addr);
+	printk(KERN_INFO "%s: write original addr=%x\n", __func__, temp_addr);
 
 	retval = i2c_master_send(client, au8Buf, 2);
-	printk(KERN_DEBUG "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
+	printk(KERN_INFO "%s: Master Send:addr=%x reg=%x count=%x\n",__func__, (unsigned short)client->addr, reg, retval);
 	if (retval < 0) {
 		pr_err("%s: ERROR write reg error:reg=%x,val=%x\n",
 			__func__, reg, val);
@@ -1409,7 +1411,7 @@ static int adv7604_probe(struct i2c_client *client,
 	memset(&adv7604_data, 0, sizeof(adv7604_data));
 
 	/* Notify adapter allocation */
-	printk(KERN_DEBUG "DBG sensor data is at %p\n", &adv7604_data);
+	printk(KERN_INFO "DBG sensor data is at %p\n", &adv7604_data);
 
 	/* adv7604 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -1418,7 +1420,7 @@ static int adv7604_probe(struct i2c_client *client,
 		return PTR_ERR(pinctrl);
 	}
 
-	printk(KERN_DEBUG "%s Requesting reset pin\n", __func__);
+	printk(KERN_INFO "%s Requesting reset pin\n", __func__);
 	/* request reset pin */
 	adv7604_data.rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
 	if (!gpio_is_valid(adv7604_data.rst_gpio)) {
@@ -1430,51 +1432,52 @@ static int adv7604_probe(struct i2c_client *client,
 	if (retval < 0)
 		return retval;
 
-	printk(KERN_DEBUG "%s initializing variables\n", __func__);
+	printk(KERN_INFO "%s initializing variables\n", __func__);
 
 	/* Initialize variables */
 	adv7604_data.i2c_client = client;	// Set the adv7604_data field <i2c_client> to this i2c_client
-	printk(KERN_DEBUG "%s devm_clk_get csi_mclk\n", __func__);
+	printk(KERN_INFO "%s devm_clk_get csi_mclk\n", __func__);
 	adv7604_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(adv7604_data.sensor_clk)) {
 		dev_err(dev, "get mclk failed\n");
 		return PTR_ERR(adv7604_data.sensor_clk);
 	}
 
-	printk(KERN_DEBUG "%s devm_clk_get mclk\n", __func__);
+	printk(KERN_INFO "%s devm_clk_get mclk\n", __func__);
 	retval = of_property_read_u32(dev->of_node, "mclk", &adv7604_data.mclk);
 	if (retval) {
 		dev_err(dev, "mclk frequency is invalid\n");
 		return retval;
 	}
 
-	printk(KERN_DEBUG "%s devm_clk_get mclk_source\n", __func__);
+	printk(KERN_INFO "%s devm_clk_get mclk_source\n", __func__);
 	retval = of_property_read_u32(dev->of_node, "mclk_source", (u32 *) &(adv7604_data.mclk_source));
 	if (retval) {
 		dev_err(dev, "mclk_source invalid\n");
 		return retval;
 	}
 
-	printk(KERN_DEBUG "%s devm_clk_get ipu_id\n", __func__);
+	printk(KERN_INFO "%s devm_clk_get ipu_id\n", __func__);
 	retval = of_property_read_u32(dev->of_node, "ipu_id", &adv7604_data.ipu_id);
 	if (retval) {
 		dev_err(dev, "ipu_id missing or invalid\n");
 		return retval;
 	}
 
-	printk(KERN_DEBUG "%s devm_clk_get csi_id\n", __func__);
+	printk(KERN_INFO "%s devm_clk_get csi_id\n", __func__);
 	retval = of_property_read_u32(dev->of_node, "csi_id", &adv7604_data.csi);
 	if (retval) {
 		dev_err(dev, "csi_id invalid\n");
 		return retval;
 	}
 
-	printk(KERN_DEBUG "%s all values read.  Preparing struct\n", __func__);
+	printk(KERN_INFO "%s all values read.  Preparing struct\n", __func__);
 	clk_prepare_enable(adv7604_data.sensor_clk);
 
 	adv7604_data.io_init = adv7604_reset;
 	adv7604_data.i2c_client = client;
-	adv7604_data.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	//adv7604_data.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	adv7604_data.pix.pixelformat = V4L2_PIX_FMT_UYUV;
 	adv7604_data.pix.width = 800;
 	adv7604_data.pix.height = 600;
 //	adv7604_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
@@ -1488,7 +1491,7 @@ static int adv7604_probe(struct i2c_client *client,
 	//state->selected_input = ~0;	
 	//state.std_id = V4L2_STD_ALL;
 
-	printk(KERN_DEBUG "%s Struct prepared.  Attempting reset\n", __func__);
+	printk(KERN_INFO "%s Struct prepared.  Attempting reset\n", __func__);
 	adv7604_reset();
 
 	adv7604_power_down(0);
@@ -1505,7 +1508,7 @@ static int adv7604_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	printk(KERN_DEBUG "%s ADV7604 found.  Attempting device enable\n", __func__);
+	printk(KERN_INFO "%s ADV7604 found.  Attempting device enable\n", __func__);
 	adv7604_power_down(1);
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
@@ -1515,19 +1518,22 @@ static int adv7604_probe(struct i2c_client *client,
 			int val;
 			  
 			if (sensor->csi != sensor->ipu_id) {
-				pr_warning("%s: csi_id(%d) != ipu_id(%d)\n", __func__, sensor->csi, sensor->ipu_id);
+				//pr_warning("%s: csi_id(%d) != ipu_id(%d)\n", __func__, sensor->csi, sensor->ipu_id);
+				  printk(KERN_WARNING "%s: csi_id(%d) != ipu_id(%d)\n", __func__, sensor->csi, sensor->ipu_id);
 				return -ENODEV;
 			}
 
+			printk(KERN_INFO "%s: sensor->ipu = %d\n", __func__,sensor->ipu_id);	
+			printk(KERN_INFO "%s: sensor->csi = %d\n", __func__,sensor->csi);	
+
 			if(sensor->csi==1)	// comparison between pointer and integer lines
 			{
-			  printk(KERN_INFO "%s: sensor->csi = %d\n", __func__,sensor->csi);	
 			  val= (1<<20) ;
 			}
 			else
                           val= (1<<19); 
 			
-			printk(KERN_DEBUG "%s: syscon_regmap_lookup: mask:%x %x\n", __func__,mask,val);
+			printk(KERN_INFO "%s: syscon_regmap_lookup: mask:%x %x\n", __func__,mask,val);
 			regmap_update_bits(gpr, IOMUXC_GPR1, val, val);
 			
 		} else if (of_machine_is_compatible("fsl,imx6dl")) {
@@ -1541,20 +1547,17 @@ static int adv7604_probe(struct i2c_client *client,
 		       __func__);
 	}
 
-	printk(KERN_DEBUG "%s IPU/CSI attached.  Allocating Device\n", __func__);
+	printk(KERN_INFO "%s IPU/CSI attached.  Allocating Device\n", __func__);
 	clk_disable_unprepare(adv7604_data.sensor_clk);
 
 	adv7604_int_device.priv = &adv7604_data;
 
-	printk(KERN_DEBUG "%s Allocated to adv7604_int_device. Attempting device registration\n", __func__);
+	printk(KERN_INFO "%s Allocated to adv7604_int_device. Attempting device registration\n", __func__);
 	retval = v4l2_int_device_register(&adv7604_int_device);
 
-	printk(KERN_DEBUG "%s ADV7604 Registered Successfully\n", __func__);
+	printk(KERN_INFO "%s ADV7604 Registered Successfully\n", __func__);
 
 	return retval;
-
-	pr_info("error initializing adv7604 driver\n");
-	return -ENODEV;
 }
 
 /* ---------------------- REMOVE ------------------------------------ */
@@ -1640,7 +1643,7 @@ module_i2c_driver(adv7604_i2c_driver);
 MODULE_AUTHOR("John Reep <john.reep@gmail.com");
 MODULE_DESCRIPTION("ADV7604 Camera Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("1.0");
+MODULE_VERSION("1.1");
 MODULE_ALIAS("CSI");
 
 

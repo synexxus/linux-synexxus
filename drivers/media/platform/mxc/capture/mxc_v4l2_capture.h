@@ -264,9 +264,9 @@ struct sensor_data {
 /*
  * Added for PI7VD9008
  */
-#ifndef USE_ADVANCED_PI7VD9008
-#define USE_ADVANCED_PI7VD9008 1
-#endif
+//#ifndef USE_ADVANCED_PI7VD9008
+//#define USE_ADVANCED_PI7VD9008 1
+//#endif
 	/*! Video format structure. */
 	struct  video_fmt_t{
 		int v4l2_id;		/*!< Video for linux ID. */
@@ -346,6 +346,7 @@ struct sensor_data {
 		struct clk *sensor_clk;
 		u32 csi;			// csi_id
 		u32 ipu_id;			// ipu_id
+		u32 vid_msb;
 
 		void (*io_init)(void);
 

@@ -232,6 +232,9 @@ typedef struct _cam_data {
 	struct dma_async_tx_descriptor *txd;
 	dma_cookie_t cookie;
 	struct scatterlist sg[2];
+
+	/* Additions */
+	int vid_msb;		// This byte determines if postprocessing of incoming data is required
 } cam_data;
 
 struct sensor_data {
@@ -346,7 +349,6 @@ struct sensor_data {
 		struct clk *sensor_clk;
 		u32 csi;			// csi_id
 		u32 ipu_id;			// ipu_id
-		u32 vid_msb;
 
 		void (*io_init)(void);
 
@@ -370,5 +372,23 @@ struct sensor_data {
 		//u32 curr_vid_std_size;
 	};
 
-void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
+	/*
+	 * This is a private set of ioctl functions used with this driver!
+	 */
+	enum mxc_v4l2_int_ioctl_num {
+		vidioc_int_priv_process_buf = vidioc_int_priv_start_num+1,
+		vidioc_int_g_input_mode_num,
+		vidioc_int_s_input_mode_num,
+	}
+
+	#define	 DEFAULT_HW_CSI_CAPTURE_MSB	19
+	/*
+	 * WRAPPER FUNCTIONS
+	 */
+	V4L2_INT_WRAPPER_1(priv_process_buf, struct v4l2_buffer, *);	// Used to allow for post processing of data in memory!
+	V4L2_INT_WRAPPER_1(g_input_mode, struct v4l2_routing, *);
+	V4L2_INT_WRAPPER_1(s_input_mode, struct v4l2_routing, *);
+
+
+	void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
 #endif				/* __MXC_V4L2_CAPTURE_H__ */
