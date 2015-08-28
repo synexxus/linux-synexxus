@@ -166,6 +166,7 @@ static int adv7604_init_default_hdmi(void)
 	 * Initialize the HDMI
 	 * 	Settings from the Register Settings Recommendations Document:
 	 */
+	printk(KERN_INFO "%s: \tWriting HDMI\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x0D, 0x84);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x3D, 0x10);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x3E, 0x39);
@@ -178,27 +179,36 @@ static int adv7604_init_default_hdmi(void)
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x94, 0x2D);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x96, 0x01);
 
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x3e, 0x00);	/* Power Off Macrovision */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xc3, 0x39);	/* Power Off Macrovision */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x40, 0x80);	/* Power Off Macrovision */
+	printk(KERN_INFO "%s: \tWriting CP\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xCF, 0x01);	/* Power Off Macrovision */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x3e, 0x00);	/* Color Conversion controls */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xc3, 0x39);	/* CP Coast Controls */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x40, 0x80);	/* CP Core Pre Gain */
 	
+	printk(KERN_INFO "%s: \tWriting AFE\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x00, 0xFF);	/* Power Off Macrovision */
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x01, 0xFE);	/* Power down ref buffer/bandcap/clamps */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x12, 0xfb);	/* ADI recommended write */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x0C, 0x0d);	/* ADI recommended write */
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0xC8, 0x40);	/* ADI recommended write */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x12, 0xfb);	/* ADI recommended write */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x0C, 0x0d);	/* ADI recommended write */
+	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0xC8, 0x40);	/* ADI recommended write */
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, 0x30, 0xC8, 0x40);	/* ADI recommended write */
 
+	printk(KERN_INFO "%s: \tWriting IO Map\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_PRIMARY_MODE, 0x06);	// HDMI-GR mode
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_VIDEO_STANDARD, adv7604_prim_mode_hdmi_gr[adv7604_hdmi_mode_SVGA_60].vid_std);	// HDMI GR mode (800x600 @60)
 
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_ESDP_SLAVE_ADDRESS, 0x0B, 0x04);	/* Power down ESDP core */
+	printk(KERN_INFO "%s: \tWriting IO Map Recommended\n",__func__);
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0B, 0x04);	// Power Down ESDP
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x42);	// Power Down VDP Core
+//	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_ESDP_SLAVE_ADDRESS, 0x0B, 0x04);	/* Power down ESDP core */
 
+	printk(KERN_INFO "%s: \tupdating Data Structure fields for HDMI Graphics\n",__func__);
 	adv7604_data.mode = ADV7604_MODE_HDMI_GR;
 	adv7604_data.curr_vid_std = adv7604_prim_mode_hdmi_gr;
 	adv7604_data.curr_vid_std_index = adv7604_hdmi_mode_SVGA_60;
 	adv7604_data.curr_vid_std_size = adv7604_hdmi_gr_mode_size;
 	adv7604_update_pixel_values();
+	printk(KERN_INFO "%s: \tReturning\n",__func__);
 	return adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_VDP_SLAVE_ADDRESS, 0x0C, 0x42);	/* Power down VDP core */
 }
 
