@@ -163,9 +163,9 @@ static int adv7604_init_default_hdmi(void)
 {
 	printk(KERN_INFO "%s: \n",__func__);
 	/*
-	* Initialize the HDMI
-	* 	Settings from the Register Settings Recommendations Document:
-	*/
+	 * Initialize the HDMI
+	 * 	Settings from the Register Settings Recommendations Document:
+	 */
 	printk(KERN_INFO "%s: \tWriting HDMI\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x0D, 0x84);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x3D, 0x10);
@@ -178,8 +178,6 @@ static int adv7604_init_default_hdmi(void)
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x93, 0x8B);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x94, 0x2D);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x96, 0x01);
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_HDMI_SLAVE_ADDRESS, 0x48, 0xC0);
-	
 
 	printk(KERN_INFO "%s: \tWriting CP\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xCF, 0x01);	/* Power Off Macrovision */
@@ -198,22 +196,11 @@ static int adv7604_init_default_hdmi(void)
 	printk(KERN_INFO "%s: \tWriting IO Map\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_PRIMARY_MODE, 0x06);	// HDMI-GR mode
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, ADV7604_REG_VIDEO_STANDARD, adv7604_prim_mode_hdmi_gr[adv7604_hdmi_mode_SVGA_60].vid_std);	// HDMI GR mode (800x600 @60)
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x15, 0xA0); // Bring LLC, SYNCS and Pixel_Bus out of TRISATE condition
-
 
 	printk(KERN_INFO "%s: \tWriting IO Map Recommended\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0B, 0x04);	// Power Down ESDP
-	// adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x42);	// Power Down VDP Core
-	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x40); // Brings up operational mode
-
-adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0xBA, 0x03); // Force HDMI free run mode
-adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0xBF, 0x13); // Force CP Blue output and free run
-	
-
-/* Force Power Up all cores/clocks and disables POWER_DOWN and PWR_SAVE_MODE of oeperation */
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x42);	// Power Down VDP Core
 //	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_ESDP_SLAVE_ADDRESS, 0x0B, 0x04);	/* Power down ESDP core */
-
-
 
 	printk(KERN_INFO "%s: \tupdating Data Structure fields for HDMI Graphics\n",__func__);
 	adv7604_data.mode = ADV7604_MODE_HDMI_GR;
@@ -349,8 +336,8 @@ static int adv7604_init_default_mode(void)
 	adv7604_soft_reset();
 	printk(KERN_INFO "%s: \n",__func__);
 
-	retval = adv7604_init_default_hdmi();	/* Come up in Default HDMI mode */
-	//retval = adv7604_init_default_comp();	/* NTSC Capture */
+	//retval = adv7604_init_default_hdmi();	/* Come up in Default HDMI mode */
+	retval = adv7604_init_default_comp();	/* NTSC Capture */
 
 	/* allow initialization time */
 	msleep(50);
@@ -1423,7 +1410,6 @@ static int adv7604_probe(struct i2c_client *client,
 	struct adv7604_sensor_data *sensor = &adv7604_data;
 
 	printk(KERN_INFO "%s: Something probed the ADV7604!\n", __func__);
-	printk(KERN_INFO "%s: Noel wants lots more beer too\n", __func__);
 
 	/* Check if the adapter supports the needed features */
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
