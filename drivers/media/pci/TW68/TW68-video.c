@@ -936,7 +936,8 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 {
 	const struct v4l2_queryctrl* ctrl;
 	int restart_overlay = 0;
-	int DMA_nCH, nId, err;
+	int DMA_nCH, nId;
+	int err = 0;
 	int regval =0;;
 	DMA_nCH = fh->DMA_nCH;
 	nId = (DMA_nCH +1)& 0xF;
@@ -1057,9 +1058,9 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 		break;
 	}
 	default:
+		err = -ENOTSUPP;
 		goto error;
 	}
-	err = 0;
 	pr_debug("%s: set_control name=%s REAL val=%d   reg  0x%X\n",
 		__func__, ctrl->name,c->value,  regval);
 
@@ -1350,6 +1351,7 @@ static int video_release(struct file *file)
 	}
 
 	pr_debug("%s: dev->video_opened: 0x%x \n", __func__, dev->video_opened);
+	synchronize_irq(dev->pci->irq);
 	videobuf_streamoff(&fh->cap);
 
 	//pr_debug(" stop video capture  CALLED   ! \n");
@@ -2178,6 +2180,7 @@ static int TW68_streamoff(struct file *file, void *priv,
 		__func__, dev->name, fh->DMA_nCH);
 	stop_video_DMA(dev, fh->DMA_nCH);
 
+	synchronize_irq(dev->pci->irq);
 	err = videobuf_streamoff(q);
 	res_free(fh, res);
 	pr_debug("%s: %s:%d q->streaming:%x  return err:%x \n",
@@ -2270,6 +2273,14 @@ struct video_device TW68_video_template = {
 	.current_norm			= V4L2_STD_NTSC,
 };
 
+void TW68_video_variable_init(struct TW68_dev *dev)
+{
+	INIT_LIST_HEAD(&dev->video_q.queued);
+
+	init_timer(&dev->delay_resync);
+	dev->delay_resync.function = resync;
+	dev->delay_resync.data     = (unsigned long)dev;
+}
 
 
 int TW68_video_init1(struct TW68_dev *dev)
@@ -2306,11 +2317,6 @@ int TW68_video_init1(struct TW68_dev *dev)
 	dev->ctl_automute   = ctrl_by_id(V4L2_CID_PRIVATE_AUTOMUTE)->default_value;
 
 	////////////////////////////////////////////////////////xxxxxxxxxxx
-	INIT_LIST_HEAD(&dev->video_q.queued);
-
-	init_timer(&dev->delay_resync);      //1021
-	dev->delay_resync.function = resync;
-	dev->delay_resync.data     = (unsigned long)dev;   ///(unsigned long)(&dev);
 	mod_timer(&dev->delay_resync, jiffies+ msecs_to_jiffies(30));
 
 

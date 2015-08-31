@@ -150,6 +150,11 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 			| ESDHC_FLAG_BUSFREQ,
 };
 
+static struct esdhc_soc_data usdhc_imx6sx_data = {
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
+			| ESDHC_FLAG_HAVE_CAP1,
+};
+
 struct pltfm_imx_data {
 	u32 scratchpad;
 	struct pinctrl *pinctrl;
@@ -168,6 +173,7 @@ struct pltfm_imx_data {
 	} multiblock_status;
 	u32 uhs_mode;
 	u32 is_ddr;
+	unsigned max_clock;
 };
 
 static struct platform_device_id imx_esdhc_devtype[] = {
@@ -191,6 +197,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx35-esdhc", .data = &esdhc_imx35_data, },
 	{ .compatible = "fsl,imx51-esdhc", .data = &esdhc_imx51_data, },
 	{ .compatible = "fsl,imx53-esdhc", .data = &esdhc_imx53_data, },
+	{ .compatible = "fsl,imx6sx-usdhc", .data = &usdhc_imx6sx_data, },
 	{ .compatible = "fsl,imx6sl-usdhc", .data = &usdhc_imx6sl_data, },
 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
 	{ /* sentinel */ }
@@ -456,6 +463,10 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			if (val & SDHCI_CTRL_EXEC_TUNING) {
 				v |= ESDHC_MIX_CTRL_EXE_TUNE;
 				m |= ESDHC_MIX_CTRL_FBCLK_SEL;
+				writel(readl(host->ioaddr + ESDHC_TUNING_CTRL) |
+					ESDHC_STD_TUNING_EN |
+					ESDHC_TUNING_START_TAP,
+					host->ioaddr + ESDHC_TUNING_CTRL);
 			} else {
 				v &= ~ESDHC_MIX_CTRL_EXE_TUNE;
 			}
@@ -600,7 +611,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		}
 		goto out;
 	}
-
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	if (esdhc_is_usdhc(imx_data) && !imx_data->is_ddr)
 		pre_div = 1;
 
@@ -916,6 +928,20 @@ static unsigned int esdhc_get_max_timeout_counter(struct sdhci_host *host)
 	return 1 << 28;
 }
 
+static void sdhci_platform_set_power
+	(struct sdhci_host *host, int on)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host ? pltfm_host->priv : 0;
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
+
+	if (imx_data && gpio_is_valid(boarddata->power_gpio)) {
+		dev_dbg(mmc_dev(host->mmc),"%s: imx_data %p, power-gpio %d, on %d\n",
+			 __func__, imx_data, imx_data ? boarddata->power_gpio : -2, on);
+		gpio_direction_output(boarddata->power_gpio, on);
+	}
+}
+
 static struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl_le,
 	.read_w = esdhc_readw_le,
@@ -966,7 +992,21 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (gpio_is_valid(boarddata->wp_gpio))
 		boarddata->wp_type = ESDHC_WP_GPIO;
 
+	boarddata->power_gpio = of_get_named_gpio(np, "power-gpio", 0);
+	dev_info(mmc_dev(host->mmc),
+		"%s: power-gpio %d\n", __func__, boarddata->power_gpio);
+	if (gpio_is_valid(boarddata->power_gpio)) {
+		int rc = gpio_request(boarddata->power_gpio, "sdhci_power");
+		if (rc) {
+			dev_err(mmc_dev(host->mmc),
+				"failed to allocate power gpio\n");
+			boarddata->power_gpio = -ENODEV;
+		}
+		gpio_direction_output(boarddata->power_gpio, 0);
+	}
+
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
@@ -1093,11 +1133,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		sdhci_esdhc_ops.platform_execute_tuning =
 					esdhc_executing_tuning;
 
-	if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING)
-		writel(readl(host->ioaddr + ESDHC_TUNING_CTRL) |
-			ESDHC_STD_TUNING_EN | ESDHC_TUNING_START_TAP,
-			host->ioaddr + ESDHC_TUNING_CTRL);
-
 	if (imx_data->socdata->flags & ESDHC_FLAG_ERR004536)
 		host->quirks |= SDHCI_QUIRK_BROKEN_ADMA;
 
@@ -1111,6 +1146,14 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		imx_data->boarddata = *((struct esdhc_platform_data *)
 					host->mmc->parent->platform_data);
 	}
+	imx_data->max_clock = ~0;
+	if (boarddata->max_clock) {
+		imx_data->max_clock = boarddata->max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
+	if (gpio_is_valid(boarddata->power_gpio))
+		sdhci_esdhc_ops. platform_set_power = sdhci_platform_set_power;
 
 	/* write_protect */
 	if (boarddata->wp_type == ESDHC_WP_GPIO) {
@@ -1179,9 +1222,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	if (boarddata->vqmmc_18v)
 		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
-	if (host->mmc->pm_caps & MMC_PM_KEEP_POWER &&
-		host->mmc->pm_caps & MMC_PM_WAKE_SDIO_IRQ)
-		device_init_wakeup(&pdev->dev, 1);
+	device_set_wakeup_capable(&pdev->dev, 1);
 
 	err = sdhci_add_host(host);
 	if (err)
@@ -1210,6 +1251,14 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
 {
 	struct sdhci_host *host = platform_get_drvdata(pdev);
 	int dead = (readl(host->ioaddr + SDHCI_INT_STATUS) == 0xffffffff);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host ? pltfm_host->priv : 0;
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
+
+	if (imx_data && gpio_is_valid(boarddata->power_gpio)) {
+		gpio_direction_output(boarddata->power_gpio, 0);
+		gpio_free(boarddata->power_gpio);
+	}
 
 	sdhci_remove_host(host, dead);
 

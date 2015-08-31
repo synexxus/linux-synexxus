@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -74,6 +74,7 @@ struct mxc_vout_fb {
 	int ipu_id;
 	struct v4l2_rect crop_bounds;
 	unsigned int disp_fmt;
+	unsigned int if_fmt;
 	bool disp_support_csc;
 	bool disp_support_windows;
 };
@@ -291,7 +292,7 @@ static ipu_channel_t get_ipu_channel(struct fb_info *fbi)
 	return ipu_ch;
 }
 
-static unsigned int get_ipu_fmt(struct fb_info *fbi)
+static unsigned int get_fb_fmt(struct fb_info *fbi)
 {
 	mm_segment_t old_fs;
 	unsigned int fb_fmt;
@@ -299,12 +300,28 @@ static unsigned int get_ipu_fmt(struct fb_info *fbi)
 	if (fbi->fbops->fb_ioctl) {
 		old_fs = get_fs();
 		set_fs(KERNEL_DS);
-		fbi->fbops->fb_ioctl(fbi, MXCFB_GET_DIFMT,
+		fbi->fbops->fb_ioctl(fbi, MXCFB_GET_FBFMT,
 				(unsigned long)&fb_fmt);
 		set_fs(old_fs);
 	}
 
 	return fb_fmt;
+}
+
+static unsigned int get_ipu_fmt(struct fb_info *fbi)
+{
+	mm_segment_t old_fs;
+	unsigned int di_fmt;
+
+	if (fbi->fbops->fb_ioctl) {
+		old_fs = get_fs();
+		set_fs(KERNEL_DS);
+		fbi->fbops->fb_ioctl(fbi, MXCFB_GET_DIFMT,
+				(unsigned long)&di_fmt);
+		set_fs(old_fs);
+	}
+
+	return di_fmt;
 }
 
 static void update_display_setting(void)
@@ -328,14 +345,21 @@ static void update_display_setting(void)
 		g_fb_setting[i].crop_bounds.top = 0;
 		g_fb_setting[i].crop_bounds.width = fbi->var.xres;
 		g_fb_setting[i].crop_bounds.height = fbi->var.yres;
-		g_fb_setting[i].disp_fmt = get_ipu_fmt(fbi);
+		g_fb_setting[i].disp_fmt = get_fb_fmt(fbi);
+		g_fb_setting[i].if_fmt = get_ipu_fmt(fbi);
 
 		if (get_ipu_channel(fbi) == MEM_BG_SYNC) {
 			bg_crop_bounds[g_fb_setting[i].ipu_id] =
 				g_fb_setting[i].crop_bounds;
-			g_fb_setting[i].disp_support_csc = true;
+			if(colorspaceofpixel(g_fb_setting[i].disp_fmt) != colorspaceofpixel(g_fb_setting[i].if_fmt))
+				g_fb_setting[i].disp_support_csc = false;  // DP CSC need be used for fb to di output.
+			else
+				g_fb_setting[i].disp_support_csc = true;
 		} else if (get_ipu_channel(fbi) == MEM_FG_SYNC) {
-			g_fb_setting[i].disp_support_csc = true;
+			if(colorspaceofpixel(g_fb_setting[i].disp_fmt) != colorspaceofpixel(g_fb_setting[i].if_fmt))
+				g_fb_setting[i].disp_support_csc = false;  // DP CSC need be used for fb to di output.
+			else
+				g_fb_setting[i].disp_support_csc = true;
 			g_fb_setting[i].disp_support_windows = true;
 		}
 	}
@@ -391,10 +415,7 @@ static int update_setting_from_fbi(struct mxc_vout_output *vout,
 	vout->task.output.crop.pos.y = 0;
 	vout->task.output.crop.w = vout->crop_bounds.width;
 	vout->task.output.crop.h = vout->crop_bounds.height;
-	if (colorspaceofpixel(vout->disp_fmt) == YUV_CS)
-		vout->task.output.format = IPU_PIX_FMT_UYVY;
-	else
-		vout->task.output.format = IPU_PIX_FMT_RGB565;
+	vout->task.output.format = vout->disp_fmt;
 
 	return 0;
 }
@@ -576,7 +597,7 @@ static void disp_work_func(struct work_struct *work)
 	unsigned long flags = 0;
 	struct ipu_pos ipos;
 	int ret = 0;
-	u32 in_fmt = 0;
+	u32 in_fmt = 0, in_width = 0, in_height = 0;
 	u32 vdi_cnt = 0;
 	u32 vdi_frame;
 	u32 index = 0;
@@ -688,7 +709,11 @@ vdi_frame_rate_double:
 			}
 			vout->task.input.paddr = vout->vdoa_task.output.paddr;
 			in_fmt = vout->task.input.format;
+			in_width = vout->task.input.width;
+			in_height = vout->task.input.height;
 			vout->task.input.format = vout->vdoa_task.output.format;
+			vout->task.input.width = vout->vdoa_task.output.width;
+			vout->task.input.height = vout->vdoa_task.output.height;
 			if (vout->task.input.deinterlace.enable) {
 				tiled_interlaced = 1;
 				vout->task.input.deinterlace.enable = 0;
@@ -697,8 +722,11 @@ vdi_frame_rate_double:
 					"tiled queue task\n");
 		}
 		ret = ipu_queue_task(&vout->task);
-		if ((!vout->tiled_bypass_pp) && tiled_fmt)
+		if ((!vout->tiled_bypass_pp) && tiled_fmt) {
 			vout->task.input.format = in_fmt;
+			vout->task.input.width = in_width;
+			vout->task.input.height = in_height;
+		}
 		if (tiled_interlaced)
 			vout->task.input.deinterlace.enable = 1;
 		if (ret < 0) {
@@ -1100,6 +1128,7 @@ static inline int vdoaipu_try_task(struct mxc_vout_output *vout)
 {
 	int ret;
 	int is_1080p_stream;
+	int in_width, in_height;
 	size_t size;
 	struct ipu_task *ipu_task = &vout->task;
 	struct ipu_crop *icrop = &ipu_task->input.crop;
@@ -1145,6 +1174,8 @@ static inline int vdoaipu_try_task(struct mxc_vout_output *vout)
 	if (is_1080p_stream)
 		ipu_task->input.crop.h = VALID_HEIGHT_1080P;
 	in_fmt = ipu_task->input.format;
+	in_width = ipu_task->input.width;
+	in_height = ipu_task->input.height;
 	ipu_task->input.format = vdoa_task->output.format;
 	ipu_task->input.height = vdoa_task->output.height;
 	ipu_task->input.width = vdoa_task->output.width;
@@ -1154,6 +1185,8 @@ static inline int vdoaipu_try_task(struct mxc_vout_output *vout)
 	if (deinterlace)
 		ipu_task->input.deinterlace.enable = 1;
 	ipu_task->input.format = in_fmt;
+	ipu_task->input.width = in_width;
+	ipu_task->input.height = in_height;
 
 	return ret;
 }
@@ -1201,18 +1234,7 @@ static int mxc_vout_try_task(struct mxc_vout_output *vout)
 		v4l2_info(vout->vfd->v4l2_dev, "Bypass IC.\n");
 		output->format = input->format;
 	} else {
-		/* if need CSC, choose IPU-DP or IPU_IC do it */
-		if (vout->disp_support_csc) {
-			if (colorspaceofpixel(input->format) == YUV_CS)
-				output->format = IPU_PIX_FMT_UYVY;
-			else
-				output->format = IPU_PIX_FMT_RGB565;
-		} else {
-			if (colorspaceofpixel(vout->disp_fmt) == YUV_CS)
-				output->format = IPU_PIX_FMT_UYVY;
-			else
-				output->format = IPU_PIX_FMT_RGB565;
-		}
+		output->format = vout->disp_fmt;
 
 		vout->tiled_bypass_pp = false;
 		if ((IPU_PIX_FMT_TILED_NV12 == input->format) ||
@@ -1912,7 +1934,7 @@ static int config_disp_output(struct mxc_vout_output *vout)
 				display_buf_size - size);
 	} else {
 		pixel = (u32 *)fbi->screen_base;
-		for (i = 0; i < (display_buf_size >> 2); i++)
+		for (i = 0; i < ((display_buf_size * fb_num) >> 2); i++)
 			*pixel++ = color;
 	}
 	console_lock();

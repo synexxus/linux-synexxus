@@ -1,4 +1,5 @@
 /*
+ * Copyright 2015 Boundary Devices, Inc.
  * Copyright 2012 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
@@ -21,24 +22,29 @@
 	compatible = "fsl,imx6q-sabrelite", "fsl,imx6q";
 };
 
-&mxcfb1 {
+&hdmi_core {
+	ipu_id = <1>;
+};
+
+&lvds_display {
 	status = "okay";
 };
 
-&mxcfb2 {
+&hdmi_display {
 	status = "okay";
 };
 
-&mxcfb3 {
-	status = "okay";
-};
-
-&mxcfb4 {
+&lcd_display {
 	status = "okay";
 };
 
 &ov5640 {
 	ipu_id = <1>;
+};
+
+&ov5640_mipi {
+	ipu_id = <1>;
+	csi_id = <0>;
 };
 
 &pinctrl_ov5640 { /* parallel camera */
@@ -62,10 +68,15 @@
 	status = "okay";
 };
 
+/* ov5640_mipi */
+&v4l2_cap_1 {
+	ipu_id = <1>;
+	csi_id = <0>;
+	mipi_camera = <1>;
+};
+
+/* ov5640 */
 &v4l2_cap_2 {
-	compatible = "fsl,imx6q-v4l2-capture";
 	ipu_id = <1>;
 	csi_id = <1>;
-	mclk_source = <0>;
-	status = "okay";
 };

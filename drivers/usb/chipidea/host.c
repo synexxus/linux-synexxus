@@ -143,6 +143,38 @@ static int ci_imx_ehci_bus_resume(struct usb_hcd *hcd)
 	return 0;
 }
 
+#ifdef CONFIG_USB_OTG
+
+static int ci_start_port_reset(struct usb_hcd *hcd, unsigned port)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	u32 __iomem *reg;
+	u32 status;
+
+	if (!port)
+		return -EINVAL;
+	port--;
+	/* start port reset before HNP protocol time out */
+	reg = &ehci->regs->port_status[port];
+	status = ehci_readl(ehci, reg);;
+	if (!(status & PORT_CONNECT))
+		return -ENODEV;
+
+	/* khubd will finish the reset later */
+	if (ehci_is_TDI(ehci))
+		ehci_writel(ehci, status | (PORT_RESET & ~PORT_RWC_BITS), reg);
+	else
+		ehci_writel(ehci, status | PORT_RESET, reg);
+
+	return 0;
+}
+
+#else
+
+#define ci_start_port_reset    NULL
+
+#endif
+
 /* The below code is based on tegra ehci driver */
 static int ci_imx_ehci_hub_control(
 	struct usb_hcd	*hcd,
@@ -258,13 +290,18 @@ static int host_start(struct ci_hdrc *ci)
 
 	hcd->power_budget = ci->platdata->power_budget;
 	hcd->phy = ci->transceiver;
+	hcd->tpl_support = ci->platdata->tpl_support;
 
 	ehci = hcd_to_ehci(hcd);
 	ehci->caps = ci->hw_bank.cap;
 	ehci->has_hostpc = ci->hw_bank.lpm;
 	ehci->imx28_write_fix = ci->imx28_write_fix;
 
-	if (ci->platdata->reg_vbus) {
+	/*
+	 * vbus is always on if host is not in OTG FSM mode,
+	 * otherwise should be controlled by OTG FSM
+	 */
+	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci)) {
 		ret = regulator_enable(ci->platdata->reg_vbus);
 		if (ret) {
 			dev_err(ci->dev,
@@ -274,24 +311,40 @@ static int host_start(struct ci_hdrc *ci)
 		}
 	}
 
+	if (ci_otg_is_fsm_mode(ci)) {
+		if (ci->fsm.id && ci->transceiver->state <= OTG_STATE_B_HOST)
+			hcd->self.is_b_host = 1;
+		else
+			hcd->self.is_b_host = 0;
+	}
+
 	ret = usb_add_hcd(hcd, 0, 0);
-	if (ret)
+	if (ret) {
 		goto disable_reg;
-	else
+	} else {
+		struct usb_otg *otg = ci->transceiver->otg;
+
 		ci->hcd = hcd;
+		if (ci_otg_is_fsm_mode(ci))
+			hcd->self.otg_port = 1;
+		if (otg)
+			otg->host = &hcd->self;
+	}
 
 	if (ci->platdata->notify_event &&
 		(ci->platdata->flags & CI_HDRC_IMX_IS_HSIC))
 		ci->platdata->notify_event
 			(ci, CI_HDRC_IMX_HSIC_ACTIVE_EVENT);
 
-	if (ci->platdata->flags & CI_HDRC_DISABLE_STREAMING)
+	if (ci->platdata->flags & CI_HDRC_DISABLE_HOST_STREAMING)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
+
+	ci_hdrc_ahb_config(ci);
 
 	return ret;
 
 disable_reg:
-	if (ci->platdata->reg_vbus)
+	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci))
 		regulator_disable(ci->platdata->reg_vbus);
 
 put_hcd:
@@ -307,11 +360,99 @@ static void host_stop(struct ci_hdrc *ci)
 	if (hcd) {
 		usb_remove_hcd(hcd);
 		usb_put_hcd(hcd);
-		if (ci->platdata->reg_vbus)
+		if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci))
 			regulator_disable(ci->platdata->reg_vbus);
+		if (hcd->self.is_b_host)
+			hcd->self.is_b_host = 0;
 	}
+	ci->hcd = NULL;
 }
 
+bool ci_hdrc_host_has_device(struct ci_hdrc *ci)
+{
+	struct usb_device *roothub;
+	int i;
+
+	if ((ci->role == CI_ROLE_HOST) && ci->hcd) {
+		roothub = ci->hcd->self.root_hub;
+		for (i = 0; i < roothub->maxchild; ++i) {
+			if (usb_hub_find_child(roothub, (i + 1)))
+				return true;
+		}
+	}
+	return false;
+}
+
+static void ci_hdrc_host_save_for_power_lost(struct ci_hdrc *ci)
+{
+	struct ehci_hcd *ehci;
+
+	if (!ci->hcd)
+		return;
+
+	ehci = hcd_to_ehci(ci->hcd);
+
+	/* save EHCI registers */
+	ci->pm_usbmode = ehci_readl(ehci, &ehci->regs->usbmode);
+	ci->pm_command = ehci_readl(ehci, &ehci->regs->command);
+	ci->pm_command &= ~CMD_RUN;
+	ci->pm_status  = ehci_readl(ehci, &ehci->regs->status);
+	ci->pm_intr_enable  = ehci_readl(ehci, &ehci->regs->intr_enable);
+	ci->pm_frame_index  = ehci_readl(ehci, &ehci->regs->frame_index);
+	ci->pm_segment  = ehci_readl(ehci, &ehci->regs->segment);
+	ci->pm_frame_list  = ehci_readl(ehci, &ehci->regs->frame_list);
+	ci->pm_async_next  = ehci_readl(ehci, &ehci->regs->async_next);
+	ci->pm_configured_flag  =
+			ehci_readl(ehci, &ehci->regs->configured_flag);
+	ci->pm_portsc = ehci_readl(ehci, &ehci->regs->port_status[0]);
+}
+
+static void ci_hdrc_host_restore_from_power_lost(struct ci_hdrc *ci)
+{
+	struct ehci_hcd *ehci;
+	unsigned long   flags;
+	u32 tmp;
+
+	if (!ci->hcd)
+		return;
+
+	hw_controller_reset(ci);
+
+	ehci = hcd_to_ehci(ci->hcd);
+	spin_lock_irqsave(&ehci->lock, flags);
+	/* restore EHCI registers */
+	ehci_writel(ehci, ci->pm_usbmode, &ehci->regs->usbmode);
+	ehci_writel(ehci, ci->pm_portsc, &ehci->regs->port_status[0]);
+	ehci_writel(ehci, ci->pm_command, &ehci->regs->command);
+	ehci_writel(ehci, ci->pm_intr_enable, &ehci->regs->intr_enable);
+	ehci_writel(ehci, ci->pm_frame_index, &ehci->regs->frame_index);
+	ehci_writel(ehci, ci->pm_segment, &ehci->regs->segment);
+	ehci_writel(ehci, ci->pm_frame_list, &ehci->regs->frame_list);
+	ehci_writel(ehci, ci->pm_async_next, &ehci->regs->async_next);
+	ehci_writel(ehci, ci->pm_configured_flag,
+					&ehci->regs->configured_flag);
+	/* Restore the PHY's connect notifier setting */
+	if (ci->pm_portsc & PORTSC_HSP)
+		usb_phy_notify_connect(ci->transceiver, USB_SPEED_HIGH);
+
+	ci_hdrc_ahb_config(ci);
+
+	tmp = ehci_readl(ehci, &ehci->regs->command);
+	tmp |= CMD_RUN;
+	ehci_writel(ehci, tmp, &ehci->regs->command);
+	spin_unlock_irqrestore(&ehci->lock, flags);
+}
+
+static void ci_hdrc_host_suspend(struct ci_hdrc *ci)
+{
+	ci_hdrc_host_save_for_power_lost(ci);
+}
+
+static void ci_hdrc_host_resume(struct ci_hdrc *ci, bool power_lost)
+{
+	if (power_lost)
+		ci_hdrc_host_restore_from_power_lost(ci);
+}
 
 void ci_hdrc_host_destroy(struct ci_hdrc *ci)
 {
@@ -333,6 +474,8 @@ int ci_hdrc_host_init(struct ci_hdrc *ci)
 	rdrv->start	= host_start;
 	rdrv->stop	= host_stop;
 	rdrv->irq	= host_irq;
+	rdrv->suspend	= ci_hdrc_host_suspend;
+	rdrv->resume	= ci_hdrc_host_resume;
 	rdrv->name	= "host";
 	ci->roles[CI_ROLE_HOST] = rdrv;
 
@@ -347,6 +490,7 @@ int ci_hdrc_host_init(struct ci_hdrc *ci)
 		ci_ehci_hc_driver.bus_resume = ci_imx_ehci_bus_resume;
 		ci_ehci_hc_driver.hub_control = ci_imx_ehci_hub_control;
 	}
+	ci_ehci_hc_driver.start_port_reset = ci_start_port_reset;
 
 	return 0;
 }

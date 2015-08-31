@@ -19,17 +19,21 @@
 
 / {
 	model = "Freescale i.MX6 Solo Nit6x-Lite Board";
-	compatible = "fsl,imx6dl-nit6xlite", "fsl,imx6q";
+	compatible = "fsl,imx6dl-nit6xlite", "fsl,imx6dl", "fsl,imx6q";
 };
 
-&mxcfb1 {
+&lvds_display {
 	status = "okay";
 };
 
-&mxcfb2 {
+&hdmi_display {
 	status = "okay";
 };
 
-&mxcfb3 {
+&lcd_display {
+	status = "okay";
+};
+
+&pxp {
 	status = "okay";
 };

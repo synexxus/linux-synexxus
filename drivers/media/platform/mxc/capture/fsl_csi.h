@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2009-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -77,8 +77,12 @@
 #define BIT_ECC_AUTO_EN		(0x1 << 0)
 
 #define SHIFT_FRMCNT		16
+#define SHIFT_RXFIFO_LEVEL	4
 
 /* csi status reg */
+#define BIT_ADDR_CH_ERR_INT (0x1 << 28)
+#define BIT_FIELD0_INT      (0x1 << 27)
+#define BIT_FIELD1_INT      (0x1 << 26)
 #define BIT_SFF_OR_INT		(0x1 << 25)
 #define BIT_RFF_OR_INT		(0x1 << 24)
 #define BIT_DMA_TSF_DONE_SFF	(0x1 << 22)
@@ -95,33 +99,40 @@
 #define BIT_ECC_INT		(0x1 << 1)
 #define BIT_DRDY		(0x1 << 0)
 
+/* csi control reg 18 */
+#define BIT_CSI_ENABLE			(0x1 << 31)
+#define BIT_BASEADDR_CHG_ERR_EN	(0x1 << 9)
+#define BIT_BASEADDR_SWITCH_SEL	(0x1 << 5)
+#define BIT_BASEADDR_SWITCH_EN	(0x1 << 4)
+#define BIT_PARALLEL24_EN		(0x1 << 3)
+#define BIT_DEINTERLACE_EN		(0x1 << 2)
+#define BIT_TVDECODER_IN_EN		(0x1 << 1)
+#define BIT_NTSC_EN				(0x1 << 0)
+
 #define CSI_MCLK_VF		1
 #define CSI_MCLK_ENC		2
 #define CSI_MCLK_RAW		4
 #define CSI_MCLK_I2C		8
 #endif
 
-extern void __iomem *csi_regbase;
-#define CSI_CSICR1		(csi_regbase)
-#define CSI_CSICR2		(csi_regbase + 0x4)
-#define CSI_CSICR3		(csi_regbase + 0x8)
-#define CSI_STATFIFO		(csi_regbase + 0xC)
-#define CSI_CSIRXFIFO		(csi_regbase + 0x10)
-#define CSI_CSIRXCNT		(csi_regbase + 0x14)
-#define CSI_CSISR		(csi_regbase + 0x18)
+#define CSI_CSICR1		0x0
+#define CSI_CSICR2		0x4
+#define CSI_CSICR3		0x8
+#define CSI_STATFIFO		0xC
+#define CSI_CSIRXFIFO		0x10
+#define CSI_CSIRXCNT		0x14
+#define CSI_CSISR		0x18
 
-#define CSI_CSIDBG		(csi_regbase + 0x1C)
-#define CSI_CSIDMASA_STATFIFO	(csi_regbase + 0x20)
-#define CSI_CSIDMATS_STATFIFO	(csi_regbase + 0x24)
-#define CSI_CSIDMASA_FB1	(csi_regbase + 0x28)
-#define CSI_CSIDMASA_FB2	(csi_regbase + 0x2C)
-#define CSI_CSIFBUF_PARA	(csi_regbase + 0x30)
-#define CSI_CSIIMAG_PARA	(csi_regbase + 0x34)
+#define CSI_CSIDBG		0x1C
+#define CSI_CSIDMASA_STATFIFO	0x20
+#define CSI_CSIDMATS_STATFIFO	0x24
+#define CSI_CSIDMASA_FB1	0x28
+#define CSI_CSIDMASA_FB2	0x2C
+#define CSI_CSIFBUF_PARA	0x30
+#define CSI_CSIIMAG_PARA	0x34
 
-static inline void csi_clear_status(unsigned long status)
-{
-	__raw_writel(status, CSI_CSISR);
-}
+#define CSI_CSICR18		0x48
+#define CSI_CSICR19		0x4c
 
 struct csi_signal_cfg_t {
 	unsigned data_width:3;
@@ -181,18 +192,42 @@ struct csi_config_t {
 	unsigned int rxcnt;
 };
 
+struct csi_soc {
+	bool online;
+	int irq_nr;
+	struct clk *disp_axi_clk;
+	struct clk *dcic_clk;
+	struct clk *csi_clk;
+	struct regulator *disp_reg;
+	void __iomem *regbase;
+};
+
 typedef void (*csi_irq_callback_t) (void *data, unsigned long status);
 
-void csi_init_interface(void);
-void csi_init_format(int fmt);
-void csi_set_16bit_imagpara(int width, int height);
-void csi_set_12bit_imagpara(int width, int height);
+void csi_set_32bit_imagpara(cam_data *cam, int width, int height);
+void csi_set_16bit_imagpara(cam_data *cam, int width, int height);
+void csi_set_12bit_imagpara(cam_data *cam, int width, int height);
+void csi_format_swap16(cam_data *cam, bool enable);
 int csi_read_mclk_flag(void);
 void csi_start_callback(void *data);
 void csi_stop_callback(void *data);
-void csi_enable_int(int arg);
-void csi_disable_int(void);
-void csi_mclk_enable(void);
-void csi_mclk_disable(void);
-void csi_dmareq_rff_enable(void);
-void csi_dmareq_rff_disable(void);
+void csi_enable_int(cam_data *cam, int arg);
+void csi_buf_stride_set(cam_data *cam, u32 stride);
+void csi_deinterlace_mode(cam_data *cam, int mode);
+void csi_deinterlace_enable(cam_data *cam, bool enable);
+void csi_tvdec_enable(cam_data *cam, bool enable);
+void csi_enable(cam_data *cam, int arg);
+void csi_disable_int(cam_data *cam);
+void csi_dmareq_rff_enable(struct csi_soc *csi);
+void csi_dmareq_rff_disable(struct csi_soc *csi);
+static inline int csi_read(struct csi_soc *csi, unsigned int offset)
+{
+	return __raw_readl(csi->regbase + offset);
+}
+static inline void csi_write(struct csi_soc *csi, unsigned int value,
+			     unsigned int offset)
+{
+	__raw_writel(value, csi->regbase + offset);
+}
+
+struct csi_soc *csi_get_soc(int id);

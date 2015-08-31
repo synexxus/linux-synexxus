@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -160,6 +160,8 @@ typedef struct _cam_data {
 
 	/* v4l2 format */
 	struct v4l2_format v2f;
+	struct v4l2_format input_fmt;	/* camera in */
+	bool bswapenable;
 	int rotation;	/* for IPUv1 and IPUv3, this means encoder rotation */
 	int vf_rotation; /* viewfinder rotation only for IPUv1 and IPUv3 */
 	struct v4l2_mxc_offset offset;
@@ -213,6 +215,8 @@ typedef struct _cam_data {
 	wait_queue_head_t power_queue;
 	unsigned int ipu_id;
 	unsigned int csi;
+	unsigned mipi_camera;
+	int csi_in_use;
 	u8 mclk_source;
 	bool mclk_on[2];	/* two mclk sources at most now */
 	int current_input;
@@ -226,6 +230,7 @@ typedef struct _cam_data {
 	struct v4l2_int_device *self;
 	int sensor_index;
 	void *ipu;
+	void *csi_soc;
 	enum imx_v4l2_devtype devtype;
 
 	/* v4l2 buf elements related to PxP DMA */
@@ -235,6 +240,9 @@ typedef struct _cam_data {
 	struct dma_async_tx_descriptor *txd;
 	dma_cookie_t cookie;
 	struct scatterlist sg[2];
+
+	/* pdev from runtime pm */
+	struct platform_device *pdev;
 } cam_data;
 
 struct sensor_data {
@@ -242,6 +250,7 @@ struct sensor_data {
 	struct v4l2_int_device *v4l2_int_device;
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
+	struct v4l2_sensor_dimension spix;
 	struct v4l2_captureparm streamcap;
 	bool on;
 
@@ -260,6 +269,7 @@ struct sensor_data {
 	struct clk *sensor_clk;
 	int ipu_id;
 	int csi;
+	int last_reg;
 	unsigned mipi_camera;
 	unsigned virtual_channel;	/* Used with mipi */
 

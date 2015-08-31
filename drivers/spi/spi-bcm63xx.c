@@ -20,7 +20,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -169,9 +168,7 @@ static int bcm63xx_txrx_bufs(struct spi_device *spi, struct spi_transfer *first,
 			       transfer_list);
 	}
 
-	len -= prepend_len;
-
-	init_completion(&bs->done);
+	reinit_completion(&bs->done);
 
 	/* Fill in the Message control register */
 	msg_ctl = (len << SPI_BYTE_CNT_SHIFT);
@@ -389,6 +386,7 @@ static int bcm63xx_spi_probe(struct platform_device *pdev)
 	}
 
 	bs = spi_master_get_devdata(master);
+	init_completion(&bs->done);
 
 	platform_set_drvdata(pdev, master);
 	bs->pdev = pdev;

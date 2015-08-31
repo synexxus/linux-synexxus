@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -28,7 +28,8 @@
 #define ASRC_FIFO_THRESHOLD_MAX		63
 #define ASRC_DMA_BUFFER_SIZE		(1024 * 48 * 4)
 #define ASRC_MAX_BUFFER_SIZE		(1024 * 48)
-#define ASRC_OUTPUT_LAST_SAMPLE_DEFAULT	8
+#define ASRC_OUTPUT_LAST_SAMPLE_DEFAULT_MAX 32
+#define ASRC_OUTPUT_LAST_SAMPLE_DEFAULT 16
 
 
 /* Ideal Ratio mode doesn't care the outclk frequency, so be fixed */
@@ -117,6 +118,7 @@
 #define ASRCTR_ASRCEx_SHIFT(x)		(1 + x)
 #define ASRCTR_ASRCEx_MASK(x)		(1 << ASRCTR_ASRCEx_SHIFT(x))
 #define ASRCTR_ASRCE(x)			(1 << ASRCTR_ASRCEx_SHIFT(x))
+#define ASRCTR_ASRCEx_ALL_MASK		(0x7 << ASRCTR_ASRCEx_SHIFT(0))
 #define ASRCTR_ASRCEN_SHIFT		0
 #define ASRCTR_ASRCEN_MASK		(1 << ASRCTR_ASRCEN_SHIFT)
 #define ASRCTR_ASRCEN			(1 << ASRCTR_ASRCEN_SHIFT)
@@ -315,7 +317,6 @@ struct asrc_pair_params {
 	enum asrc_pair_index index;
 	struct completion input_complete;
 	struct completion output_complete;
-	struct completion lastperiod_complete;
 	struct dma_chan *input_dma_channel;
 	struct dma_chan *output_dma_channel;
 	unsigned int input_buffer_size;
@@ -331,7 +332,6 @@ struct asrc_pair_params {
 	struct dma_block output_last_period;
 	struct dma_async_tx_descriptor *desc_in;
 	struct dma_async_tx_descriptor *desc_out;
-	struct work_struct task_output_work;
 	unsigned int input_sg_nodes;
 	unsigned int output_sg_nodes;
 	struct scatterlist input_sg[4], output_sg[4];
@@ -345,11 +345,14 @@ struct asrc_pair_params {
 };
 
 struct asrc_data {
+	struct asrc_pair_params *params[ASRC_PAIR_MAX_NUM];
 	struct asrc_pair asrc_pair[ASRC_PAIR_MAX_NUM];
 	struct proc_dir_entry *proc_asrc;
 	struct class *asrc_class;
 	struct regmap *regmap;
-	struct clk *asrc_clk;
+	struct clk *mem_clk;
+	struct clk *ipg_clk;
+	struct clk *asrck_clk;
 	struct clk *dma_clk;
 	unsigned long paddr;
 	unsigned int channel_bits;

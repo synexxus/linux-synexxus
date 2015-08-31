@@ -13,10 +13,12 @@
 #ifndef __DRIVERS_USB_CHIPIDEA_CI_H
 #define __DRIVERS_USB_CHIPIDEA_CI_H
 
+#include <linux/extcon.h>
 #include <linux/list.h>
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/otg-fsm.h>
 
 /******************************************************************************
  * DEFINE
@@ -69,15 +71,20 @@ enum ci_role {
 
 /**
  * struct ci_role_driver - host/gadget role driver
- * start: start this role
- * stop: stop this role
- * irq: irq handler for this role
- * name: role name string (host/gadget)
+ * @start: start this role
+ * @stop: stop this role
+ * @irq: irq handler for this role
+ * @suspend: system suspend handler for this role
+ * @resume: system resume handler for this role
+ * @name: role name string (host/gadget)
  */
 struct ci_role_driver {
 	int		(*start)(struct ci_hdrc *);
 	void		(*stop)(struct ci_hdrc *);
 	irqreturn_t	(*irq)(struct ci_hdrc *);
+	void		(*suspend)(struct ci_hdrc *);
+			/* Restore after power lost */
+	void		(*resume)(struct ci_hdrc *, bool power_lost);
 	const char	*name;
 };
 
@@ -110,8 +117,11 @@ struct hw_bank {
  * @roles: array of supported roles for this controller
  * @role: current role
  * @is_otg: if the device is otg-capable
- * @otg_task: the thread for handling otg task
- * @otg_wait: the otg event waitqueue head
+ * @fsm: otg finite state machine
+ * @fsm_timer: pointer to timer list of otg fsm
+ * @hnp_polling_work: work for hnp polling
+ * @work: work for role changing
+ * @wq: workqueue thread
  * @qh_pool: allocation pool for queue heads
  * @td_pool: allocation pool for transfer descriptors
  * @gadget: device side representation for peripheral controller
@@ -140,6 +150,7 @@ struct hw_bank {
  * @in_lpm: if the core in low power mode
  * @wakeup_int: if wakeup interrupt occur
  * @timer: timer to delay clock closing
+ * @wakeup_source: if usb as system wakeup source
  */
 struct ci_hdrc {
 	struct device			*dev;
@@ -149,8 +160,13 @@ struct ci_hdrc {
 	struct ci_role_driver		*roles[CI_ROLE_END];
 	enum ci_role			role;
 	bool				is_otg;
-	struct task_struct		*otg_task;
-	wait_queue_head_t		otg_wait;
+	struct otg_fsm			fsm;
+	struct ci_otg_fsm_timer_list	*fsm_timer;
+	struct timer_list		hnp_polling_timer;
+	struct work_struct		hnp_polling_work;
+	struct work_struct		work;
+	struct workqueue_struct		*wq;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
@@ -171,19 +187,32 @@ struct ci_hdrc {
 
 	struct ci_hdrc_platform_data	*platdata;
 	int				vbus_active;
-	/* FIXME: some day, we'll not use global phy */
-	bool				global_phy;
 	struct usb_phy			*transceiver;
 	struct usb_hcd			*hcd;
 	struct dentry			*debugfs;
 	bool				id_event;
 	bool				b_sess_valid_event;
+	bool				vbus_glitch_check_event;
 	/* imx28 needs swp instruction for writing */
 	bool				imx28_write_fix;
 	bool				supports_runtime_pm;
 	bool				in_lpm;
 	bool				wakeup_int;
 	struct timer_list		timer;
+	/* register save area for suspend&resume */
+	u32				pm_command;
+	u32				pm_status;
+	u32				pm_intr_enable;
+	u32				pm_frame_index;
+	u32				pm_segment;
+	u32				pm_frame_list;
+	u32				pm_async_next;
+	u32				pm_configured_flag;
+	u32				pm_portsc;
+	u32				pm_usbmode;
+	struct work_struct		power_lost_work;
+	bool				wakeup_source;
+	struct extcon_dev		extcon;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
@@ -239,6 +268,7 @@ enum ci_hw_regs {
 	OP_DEVICEADDR,
 	OP_ENDPTLISTADDR,
 	OP_PORTSC,
+	OP_BURSTSIZE,
 	OP_DEVLC,
 	OP_OTGSC,
 	OP_USBMODE,
@@ -252,8 +282,11 @@ enum ci_hw_regs {
 	OP_LAST = OP_ENDPTCTRL + ENDPT_MAX / 2,
 };
 
+#define SBUSCFG	0x90
+
 /**
  * hw_read: reads from a hw register
+ * @ci: the controller
  * @reg:  register index
  * @mask: bitfield mask
  *
@@ -286,6 +319,7 @@ static inline void __hw_write(struct ci_hdrc *ci, u32 val,
 
 /**
  * hw_write: writes to a hw register
+ * @ci: the controller
  * @reg:  register index
  * @mask: bitfield mask
  * @data: new value
@@ -302,6 +336,7 @@ static inline void hw_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
 
 /**
  * hw_test_and_clear: tests & clears a hw register
+ * @ci: the controller
  * @reg:  register index
  * @mask: bitfield mask
  *
@@ -318,6 +353,7 @@ static inline u32 hw_test_and_clear(struct ci_hdrc *ci, enum ci_hw_regs reg,
 
 /**
  * hw_test_and_write: tests & writes a hw register
+ * @ci: the controller
  * @reg:  register index
  * @mask: bitfield mask
  * @data: new value
@@ -333,7 +369,27 @@ static inline u32 hw_test_and_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
 	return (val & mask) >> __ffs(mask);
 }
 
-int hw_device_reset(struct ci_hdrc *ci, u32 mode);
+/**
+ * ci_otg_is_fsm_mode: runtime check if otg controller
+ * is in otg fsm mode.
+ *
+ * @ci: chipidea device
+ */
+static inline bool ci_otg_is_fsm_mode(struct ci_hdrc *ci)
+{
+#ifdef CONFIG_USB_OTG_FSM
+	return ci->is_otg && ci->roles[CI_ROLE_HOST] &&
+					ci->roles[CI_ROLE_GADGET];
+#else
+	return false;
+#endif
+}
+
+u32 hw_read_intr_enable(struct ci_hdrc *ci);
+
+u32 hw_read_intr_status(struct ci_hdrc *ci);
+
+int hw_device_reset(struct ci_hdrc *ci);
 
 int hw_port_test_set(struct ci_hdrc *ci, u8 mode);
 
@@ -341,5 +397,16 @@ u8 hw_port_test_get(struct ci_hdrc *ci);
 
 int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
 				u32 value, unsigned int timeout_ms);
+
+int hw_controller_reset(struct ci_hdrc *ci);
+void ci_hdrc_ahb_config(struct ci_hdrc *ci);
+#ifdef CONFIG_PM
+void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms);
+#else
+static inline void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms)
+{
+
+}
+#endif
 
 #endif	/* __DRIVERS_USB_CHIPIDEA_CI_H */

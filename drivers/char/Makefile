@@ -41,6 +41,8 @@ obj-$(CONFIG_TOSHIBA)		+= toshiba.o
 obj-$(CONFIG_I8K)		+= i8k.o
 obj-$(CONFIG_DS1620)		+= ds1620.o
 obj-$(CONFIG_HW_RANDOM)		+= hw_random/
+obj-$(CONFIG_MAGSTRIPE)		+= magdecode.o
+obj-$(CONFIG_SAS)		+= sas.o
 obj-$(CONFIG_PPDEV)		+= ppdev.o
 obj-$(CONFIG_NWBUTTON)		+= nwbutton.o
 obj-$(CONFIG_NWFLASH)		+= nwflash.o
@@ -64,3 +66,5 @@ obj-$(CONFIG_JS_RTC)		+= js-rtc.o
 js-rtc-y = rtc.o
 
 obj-$(CONFIG_TILE_SROM)		+= tile-srom.o
+obj-$(CONFIG_XILLYBUS)          += xillybus/
+obj-$(CONFIG_HAVE_IMX_MCC)      += imx_mcc/

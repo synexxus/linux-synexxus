@@ -31,15 +31,15 @@ static void i2c_mux_gpio_set(const struct gpiomux *mux, unsigned val)
 	int i;
 
 	for (i = 0; i < mux->data.n_gpios; i++)
-		gpio_set_value(mux->gpio_base + mux->data.gpios[i],
-			       val & (1 << i));
+		gpio_set_value_cansleep(mux->gpio_base + mux->data.gpios[i],
+					val & (1 << i));
 }
 
 static int i2c_mux_gpio_select(struct i2c_adapter *adap, void *data, u32 chan)
 {
 	struct gpiomux *mux = data;
 
-	i2c_mux_gpio_set(mux, mux->data.values[chan]);
+	i2c_mux_gpio_set(mux, chan);
 
 	return 0;
 }
@@ -223,7 +223,7 @@ static int i2c_mux_gpio_probe(struct platform_device *pdev)
 		unsigned int class = mux->data.classes ? mux->data.classes[i] : 0;
 
 		mux->adap[i] = i2c_add_mux_adapter(parent, &pdev->dev, mux, nr,
-						   i, class,
+						   mux->data.values[i], class,
 						   i2c_mux_gpio_select, deselect);
 		if (!mux->adap[i]) {
 			ret = -ENODEV;
@@ -273,7 +273,7 @@ static const struct of_device_id i2c_mux_gpio_of_match[] = {
 MODULE_DEVICE_TABLE(of, i2c_mux_gpio_of_match);
 
 static struct platform_driver i2c_mux_gpio_driver = {
-	.probe	= i2c_mux_gpio_probe,
+//	.probe	= i2c_mux_gpio_probe,
 	.remove	= i2c_mux_gpio_remove,
 	.driver	= {
 		.owner	= THIS_MODULE,
@@ -282,7 +282,17 @@ static struct platform_driver i2c_mux_gpio_driver = {
 	},
 };
 
-module_platform_driver(i2c_mux_gpio_driver);
+static int __init i2c_mux_gpio_init(void)
+{
+	return platform_driver_probe(&i2c_mux_gpio_driver, i2c_mux_gpio_probe);
+}
+subsys_initcall(i2c_mux_gpio_init);
+
+static void __exit i2c_mux_gpio_exit(void)
+{
+	platform_driver_unregister(&i2c_mux_gpio_driver);
+}
+module_exit(i2c_mux_gpio_exit);
 
 MODULE_DESCRIPTION("GPIO-based I2C multiplexer driver");
 MODULE_AUTHOR("Peter Korsgaard <peter.korsgaard@barco.com>");

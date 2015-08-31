@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -39,6 +39,104 @@ static bool filter(struct dma_chan *chan, void *param)
 	return true;
 }
 
+static const char *p2p_width_sel[] = {"16 bit", "24 bit"};
+static const unsigned int p2p_width_val[] = { 0, 1 };
+static const struct soc_enum p2p_width_enum =
+	SOC_VALUE_ENUM_SINGLE(-1, 0, 1,
+			      ARRAY_SIZE(p2p_width_sel),
+			      p2p_width_sel,
+			      p2p_width_val);
+
+static int fsl_asrc_p2p_width_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *uvalue)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+
+	uvalue->value.integer.value[0] = asrc_p2p->p2p_width == 16 ? 0 : 1;
+	return 0;
+}
+
+static int fsl_asrc_p2p_width_put(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *uvalue)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+
+	asrc_p2p->p2p_width = uvalue->value.integer.value[0] ? 24 : 16;
+	return 0;
+}
+
+/* p2p_support_rate is a intersection of input and output */
+static const int p2p_support_rate[] = { 32000, 44100, 48000, 64000, 88200, 96000, 176400, 192000 };
+static const char *p2p_rate_sel[] = { "32000", "44100", "48000", "64000", "88200", "96000", "176400", "192000" };
+static const unsigned int p2p_rate_val[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+static const struct soc_enum p2p_rate_enum =
+	SOC_VALUE_ENUM_SINGLE(-1, 0, 7,
+			      ARRAY_SIZE(p2p_rate_sel),
+			      p2p_rate_sel,
+			      p2p_rate_val);
+
+static int fsl_asrc_p2p_rate_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *uvalue)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(p2p_support_rate); i++) {
+		if (p2p_support_rate[i] == asrc_p2p->p2p_rate)
+			break;
+	}
+
+	if (i == ARRAY_SIZE(p2p_support_rate))
+		return 0;
+
+	uvalue->value.integer.value[0] = i;
+
+	return 0;
+}
+
+static int fsl_asrc_p2p_rate_put(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *uvalue)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+
+	if (uvalue->value.integer.value[0] < 0 ||
+		uvalue->value.integer.value[0] >= ARRAY_SIZE(p2p_support_rate))
+		return 0;
+
+	asrc_p2p->p2p_rate = p2p_support_rate[uvalue->value.integer.value[0]];
+
+	return 0;
+}
+
+static struct snd_kcontrol_new fsl_asrc_p2p_ctrls[] = {
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "ASRC P2P width",
+		.access = SNDRV_CTL_ELEM_ACCESS_READ |
+			SNDRV_CTL_ELEM_ACCESS_WRITE |
+			SNDRV_CTL_ELEM_ACCESS_VOLATILE,
+		.info = snd_soc_info_enum_double,
+		.get = fsl_asrc_p2p_width_get,
+		.put = fsl_asrc_p2p_width_put,
+		.private_value = (unsigned long)&p2p_width_enum,
+	},
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "ASRC P2P Rate",
+		.access = SNDRV_CTL_ELEM_ACCESS_READ |
+			SNDRV_CTL_ELEM_ACCESS_WRITE |
+			SNDRV_CTL_ELEM_ACCESS_VOLATILE,
+		.info = snd_soc_info_enum_double,
+		.get = fsl_asrc_p2p_rate_get,
+		.put = fsl_asrc_p2p_rate_put,
+		.private_value = (unsigned long)&p2p_rate_enum,
+	},
+};
+
 static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -49,12 +147,13 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 	struct snd_dmaengine_dai_dma_data *dma_params_fe = NULL;
 	struct imx_dma_data *fe_filter_data = NULL;
 	struct imx_dma_data *be_filter_data = NULL;
-
+	struct fsl_asrc_p2p_params *p2p_params = &asrc_p2p->p2p_params[substream->stream];
+	enum asrc_pair_index asrc_index = p2p_params->asrc_index;
 	struct dma_slave_config slave_config;
 	dma_cap_mask_t mask;
-	struct dma_chan *chan;
-	int ret;
 	struct snd_soc_dpcm *dpcm;
+	bool playback = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	int ret;
 
 	/* find the be for this fe stream */
 	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].be_clients, list_be) {
@@ -80,55 +179,61 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 
 	fe_filter_data = dma_params_fe->filter_data;
 	be_filter_data = dma_params_be->filter_data;
+	if (!fe_filter_data || !be_filter_data) {
+		dev_err(rtd->card->dev, "can't get be or fe filter data\n");
+		return -EINVAL;
+	}
 
-	if (asrc_p2p->output_width == 16)
+	if (asrc_p2p->p2p_width == 16)
 		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	else
 		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
 
 	/* reconfig memory to FIFO dma request */
-	dma_params_fe->addr = asrc_p2p->asrc_ops.asrc_p2p_per_addr(
-						asrc_p2p->asrc_index, 1);
-	fe_filter_data->dma_request0 = asrc_p2p->dmarx[asrc_p2p->asrc_index];
+	dma_params_fe->addr = asrc_p2p->asrc_ops.asrc_p2p_per_addr(asrc_index, playback);
 	dma_params_fe->maxburst = dma_params_be->maxburst;
+	fe_filter_data->dma_request0 = playback ? asrc_p2p->dmarx[asrc_index] : asrc_p2p->dmatx[asrc_index];
 
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 	dma_cap_set(DMA_CYCLIC, mask);
 
 	/* config p2p dma channel */
-	asrc_p2p->asrc_p2p_dma_data.peripheral_type = IMX_DMATYPE_ASRC;
-	asrc_p2p->asrc_p2p_dma_data.priority        = DMA_PRIO_HIGH;
-	asrc_p2p->asrc_p2p_dma_data.dma_request1    = asrc_p2p->dmatx[asrc_p2p->asrc_index];
+	p2p_params->dma_data.peripheral_type = IMX_DMATYPE_ASRC;
+	p2p_params->dma_data.priority        = DMA_PRIO_HIGH;
+	p2p_params->dma_data.dma_request1    = playback ? asrc_p2p->dmatx[asrc_index] : asrc_p2p->dmarx[asrc_index];
 	/* need to get target device's dma dma_addr, burstsize */
-	asrc_p2p->asrc_p2p_dma_data.dma_request0    = be_filter_data->dma_request0;
+	p2p_params->dma_data.dma_request0    = be_filter_data->dma_request0;
 
 	/* Request channel */
-	asrc_p2p->asrc_p2p_dma_chan =
-		dma_request_channel(mask, filter, &asrc_p2p->asrc_p2p_dma_data);
-
-	if (!asrc_p2p->asrc_p2p_dma_chan) {
+	p2p_params->dma_chan = dma_request_channel(mask, filter, &p2p_params->dma_data);
+	if (!p2p_params->dma_chan) {
 		dev_err(rtd->card->dev, "can not request dma channel\n");
 		goto error;
 	}
-	chan = asrc_p2p->asrc_p2p_dma_chan;
 
 	/*
 	 * Buswidth is not used in the sdma for p2p. Here we set the maxburst fix to
 	 * twice of dma_params's burstsize.
 	 */
 	slave_config.direction      = DMA_DEV_TO_DEV;
-	slave_config.src_addr       = asrc_p2p->asrc_ops.asrc_p2p_per_addr(asrc_p2p->asrc_index, 0);
 	slave_config.src_addr_width = buswidth;
-	slave_config.src_maxburst   = dma_params_be->maxburst * 2;
-	slave_config.dst_addr       = dma_params_be->addr;
+	slave_config.src_maxburst   = dma_params_be->maxburst;
 	slave_config.dst_addr_width = buswidth;
-	slave_config.dst_maxburst   = dma_params_be->maxburst * 2;
+	slave_config.dst_maxburst   = dma_params_be->maxburst;
 	slave_config.dma_request0   = be_filter_data->dma_request0;
-	slave_config.dma_request1   = asrc_p2p->dmatx[asrc_p2p->asrc_index];
 
-	ret = dmaengine_slave_config(asrc_p2p->asrc_p2p_dma_chan,
-							&slave_config);
+	if (playback) {
+		slave_config.src_addr       = asrc_p2p->asrc_ops.asrc_p2p_per_addr(asrc_index, !playback);
+		slave_config.dst_addr       = dma_params_be->addr;
+		slave_config.dma_request1   = asrc_p2p->dmatx[asrc_index];
+	} else {
+		slave_config.dst_addr       = asrc_p2p->asrc_ops.asrc_p2p_per_addr(asrc_index, !playback);
+		slave_config.src_addr       = dma_params_be->addr;
+		slave_config.dma_request1   = asrc_p2p->dmarx[asrc_index];
+	}
+
+	ret = dmaengine_slave_config(p2p_params->dma_chan, &slave_config);
 	if (ret) {
 		dev_err(rtd->card->dev, "can not config dma channel\n");
 		goto error;
@@ -136,9 +241,9 @@ static int asrc_p2p_request_channel(struct snd_pcm_substream *substream)
 
 	return 0;
 error:
-	if (asrc_p2p->asrc_p2p_dma_chan) {
-		dma_release_channel(asrc_p2p->asrc_p2p_dma_chan);
-		asrc_p2p->asrc_p2p_dma_chan = NULL;
+	if (p2p_params->dma_chan) {
+		dma_release_channel(p2p_params->dma_chan);
+		p2p_params->dma_chan = NULL;
 	}
 
 	return -EINVAL;
@@ -150,33 +255,34 @@ static int config_asrc(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai     = rtd->cpu_dai;
 	struct fsl_asrc_p2p *asrc_p2p   = snd_soc_dai_get_drvdata(cpu_dai);
+	struct fsl_asrc_p2p_params *p2p_params = &asrc_p2p->p2p_params[substream->stream];
 	unsigned int rate    = params_rate(params);
 	unsigned int channel = params_channels(params);
 	struct asrc_config config = {0};
-	int output_word_width = 0;
-	int input_word_width = 0;
+	int p2p_word_width = 0;
+	int word_width = 0;
 	int ret = 0;
 	if ((channel != 2) && (channel != 4) && (channel != 6)) {
 		dev_err(cpu_dai->dev, "param channel is not correct\n");
 		return -EINVAL;
 	}
 
-	ret = asrc_p2p->asrc_ops.asrc_p2p_req_pair(channel, &asrc_p2p->asrc_index);
+	ret = asrc_p2p->asrc_ops.asrc_p2p_req_pair(channel, &p2p_params->asrc_index);
 	if (ret < 0) {
 		dev_err(cpu_dai->dev, "Fail to request asrc pair\n");
 		return -EINVAL;
 	}
 
-	if (asrc_p2p->output_width == 16)
-		output_word_width = ASRC_WIDTH_16_BIT;
+	if (asrc_p2p->p2p_width == 16)
+		p2p_word_width = ASRC_WIDTH_16_BIT;
 	else
-		output_word_width = ASRC_WIDTH_24_BIT;
+		p2p_word_width = ASRC_WIDTH_24_BIT;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_U16:
 	case SNDRV_PCM_FORMAT_S16_LE:
 	case SNDRV_PCM_FORMAT_S16_BE:
-		input_word_width = ASRC_WIDTH_16_BIT;
+		word_width = ASRC_WIDTH_16_BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S20_3LE:
 	case SNDRV_PCM_FORMAT_S20_3BE:
@@ -188,7 +294,7 @@ static int config_asrc(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_FORMAT_U24_LE:
 	case SNDRV_PCM_FORMAT_U24_3BE:
 	case SNDRV_PCM_FORMAT_U24_3LE:
-		input_word_width =  ASRC_WIDTH_24_BIT;
+		word_width =  ASRC_WIDTH_24_BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S8:
 	case SNDRV_PCM_FORMAT_U8:
@@ -199,30 +305,38 @@ static int config_asrc(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	config.input_word_width   = input_word_width;
-	config.output_word_width  = output_word_width;
-	config.pair               = asrc_p2p->asrc_index;
+	config.pair               = p2p_params->asrc_index;
 	config.channel_num        = channel;
-	config.input_sample_rate  = rate;
-	config.output_sample_rate = asrc_p2p->output_rate;
 	config.inclk              = INCLK_NONE;
 
-	switch (asrc_p2p->per_dev) {
-	case SSI1:
-		config.outclk    = OUTCLK_SSI1_TX;
-		break;
-	case SSI2:
-		config.outclk    = OUTCLK_SSI2_TX;
-		break;
-	case SSI3:
-		config.outclk    = OUTCLK_SSI3_TX;
-		break;
-	case ESAI:
-		config.outclk    = OUTCLK_ESAI_TX;
-		break;
-	default:
-		dev_err(cpu_dai->dev, "peripheral device is not correct\n");
-		return -EINVAL;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		config.input_word_width   = word_width;
+		config.output_word_width  = p2p_word_width;
+		config.input_sample_rate  = rate;
+		config.output_sample_rate = asrc_p2p->p2p_rate;
+		switch (asrc_p2p->per_dev) {
+		case SSI1:
+			config.outclk    = OUTCLK_SSI1_TX;
+			break;
+		case SSI2:
+			config.outclk    = OUTCLK_SSI2_TX;
+			break;
+		case SSI3:
+			config.outclk    = OUTCLK_SSI3_TX;
+			break;
+		case ESAI:
+			config.outclk    = OUTCLK_ESAI_TX;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "peripheral device is not correct\n");
+			return -EINVAL;
+		}
+	} else {
+		config.input_word_width   = p2p_word_width;
+		config.output_word_width  = word_width;
+		config.input_sample_rate  = asrc_p2p->p2p_rate;
+		config.output_sample_rate = rate;
+		config.outclk             = OUTCLK_ASRCK1_CLK;
 	}
 
 	ret = asrc_p2p->asrc_ops.asrc_p2p_config_pair(&config);
@@ -251,18 +365,21 @@ static int fsl_asrc_p2p_hw_free(struct snd_pcm_substream *substream,
 			      struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+	struct fsl_asrc_p2p_params *p2p_params = &asrc_p2p->p2p_params[substream->stream];
+	struct dma_chan *chan = p2p_params->dma_chan;
+	enum asrc_pair_index asrc_index = p2p_params->asrc_index;
 
-	if (asrc_p2p->asrc_p2p_dma_chan) {
+	if (chan) {
 		/* Release p2p dma resource */
-		dma_release_channel(asrc_p2p->asrc_p2p_dma_chan);
-		asrc_p2p->asrc_p2p_dma_chan = NULL;
+		dma_release_channel(chan);
+		p2p_params->dma_chan = NULL;
 	}
 
-	if (asrc_p2p->asrc_index != -1) {
-		asrc_p2p->asrc_ops.asrc_p2p_release_pair(asrc_p2p->asrc_index);
-		asrc_p2p->asrc_ops.asrc_p2p_finish_conv(asrc_p2p->asrc_index);
+	if (asrc_index != -1) {
+		asrc_p2p->asrc_ops.asrc_p2p_release_pair(asrc_index);
+		asrc_p2p->asrc_ops.asrc_p2p_finish_conv(asrc_index);
+		p2p_params->asrc_index = -1;
 	}
-	asrc_p2p->asrc_index = -1;
 
 	return 0;
 }
@@ -270,8 +387,9 @@ static int fsl_asrc_p2p_hw_free(struct snd_pcm_substream *substream,
 static int fsl_asrc_dma_prepare_and_submit(struct snd_pcm_substream *substream,
 					struct fsl_asrc_p2p *asrc_p2p)
 {
-	struct dma_async_tx_descriptor *desc = asrc_p2p->asrc_p2p_desc;
-	struct dma_chan *chan = asrc_p2p->asrc_p2p_dma_chan;
+	struct fsl_asrc_p2p_params *p2p_params = &asrc_p2p->p2p_params[substream->stream];
+	struct dma_chan *chan = p2p_params->dma_chan;
+	struct dma_async_tx_descriptor *desc = p2p_params->desc;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct device *dev = rtd->platform->dev;
 
@@ -290,6 +408,9 @@ static int fsl_asrc_p2p_trigger(struct snd_pcm_substream *substream, int cmd,
 			    struct snd_soc_dai *cpu_dai)
 {
 	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+	struct fsl_asrc_p2p_params *p2p_params = &asrc_p2p->p2p_params[substream->stream];
+	struct dma_chan *chan = p2p_params->dma_chan;
+	enum asrc_pair_index asrc_index = p2p_params->asrc_index;
 	int ret;
 
 	switch (cmd) {
@@ -299,20 +420,40 @@ static int fsl_asrc_p2p_trigger(struct snd_pcm_substream *substream, int cmd,
 		ret = fsl_asrc_dma_prepare_and_submit(substream, asrc_p2p);
 		if (ret)
 			return ret;
-		dma_async_issue_pending(asrc_p2p->asrc_p2p_dma_chan);
-		asrc_p2p->asrc_ops.asrc_p2p_start_conv(asrc_p2p->asrc_index);
+		dma_async_issue_pending(chan);
+		asrc_p2p->asrc_ops.asrc_p2p_start_conv(asrc_index);
+
+		/* Output enough data to content the DMA burstsize of BE */
+		mdelay(1);
 		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_STOP:
-		dmaengine_terminate_all(asrc_p2p->asrc_p2p_dma_chan);
-		asrc_p2p->asrc_ops.asrc_p2p_stop_conv(asrc_p2p->asrc_index);
+		dmaengine_terminate_all(chan);
+		asrc_p2p->asrc_ops.asrc_p2p_stop_conv(asrc_index);
 		break;
 	default:
 		return -EINVAL;
 	}
 
 	return 0;
+}
+
+static int fsl_asrc_p2p_startup(struct snd_pcm_substream *substream,
+			    struct snd_soc_dai *cpu_dai)
+{
+	struct fsl_asrc_p2p *asrc_p2p   = snd_soc_dai_get_drvdata(cpu_dai);
+
+	asrc_p2p->substream[substream->stream] = substream;
+	return 0;
+}
+
+static void fsl_asrc_p2p_shutdown(struct snd_pcm_substream *substream,
+			    struct snd_soc_dai *cpu_dai)
+{
+	struct fsl_asrc_p2p *asrc_p2p   = snd_soc_dai_get_drvdata(cpu_dai);
+
+	asrc_p2p->substream[substream->stream] = NULL;
 }
 
 #define IMX_ASRC_RATES  SNDRV_PCM_RATE_8000_192000
@@ -322,6 +463,8 @@ static int fsl_asrc_p2p_trigger(struct snd_pcm_substream *substream, int cmd,
 	SNDRV_PCM_FORMAT_S20_3LE)
 
 static struct snd_soc_dai_ops fsl_asrc_p2p_dai_ops = {
+	.startup      = fsl_asrc_p2p_startup,
+	.shutdown     = fsl_asrc_p2p_shutdown,
 	.trigger      = fsl_asrc_p2p_trigger,
 	.hw_params    = fsl_asrc_p2p_hw_params,
 	.hw_free      = fsl_asrc_p2p_hw_free,
@@ -330,9 +473,15 @@ static struct snd_soc_dai_ops fsl_asrc_p2p_dai_ops = {
 static int fsl_asrc_p2p_dai_probe(struct snd_soc_dai *dai)
 {
 	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(dai);
+	int ret;
 
 	dai->playback_dma_data = &asrc_p2p->dma_params_tx;
 	dai->capture_dma_data = &asrc_p2p->dma_params_rx;
+
+	ret = snd_soc_add_dai_controls(dai, fsl_asrc_p2p_ctrls,
+			ARRAY_SIZE(fsl_asrc_p2p_ctrls));
+	if (ret)
+		dev_warn(dai->dev, "failed to add dai controls\n");
 
 	return 0;
 }
@@ -359,6 +508,86 @@ static struct snd_soc_dai_driver fsl_asrc_p2p_dai = {
 static const struct snd_soc_component_driver fsl_asrc_p2p_component = {
 	.name		= "fsl-asrc-p2p",
 };
+
+static bool fsl_asrc_p2p_check_xrun(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_dmaengine_dai_dma_data *dma_params_be = NULL;
+	struct snd_pcm_substream *be_substream;
+	struct snd_soc_dpcm *dpcm;
+	int ret = 0;
+
+	/* find the be for this fe stream */
+	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].be_clients, list_be) {
+		struct snd_soc_pcm_runtime *be = dpcm->be;
+		struct snd_soc_dai *dai = be->cpu_dai;
+
+		if (dpcm->fe != rtd)
+			continue;
+
+		be_substream = snd_soc_dpcm_get_substream(be, substream->stream);
+		dma_params_be = snd_soc_dai_get_dma_data(dai, be_substream);
+		if (dma_params_be->check_xrun && dma_params_be->check_xrun(be_substream))
+			ret = 1;
+	}
+
+	return ret;
+}
+
+static int stop_lock_stream(struct snd_pcm_substream *substream)
+{
+	if (substream) {
+		snd_pcm_stream_lock_irq(substream);
+		if (substream->runtime->status->state == SNDRV_PCM_STATE_RUNNING)
+			substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_STOP);
+	}
+	return 0;
+}
+
+static int start_unlock_stream(struct snd_pcm_substream *substream)
+{
+	if (substream) {
+		if (substream->runtime->status->state == SNDRV_PCM_STATE_RUNNING)
+			substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_START);
+		snd_pcm_stream_unlock_irq(substream);
+	}
+	return 0;
+}
+
+static void fsl_asrc_p2p_reset(struct snd_pcm_substream *substream, bool stop)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct fsl_asrc_p2p *asrc_p2p = snd_soc_dai_get_drvdata(cpu_dai);
+	struct snd_dmaengine_dai_dma_data *dma_params_be = NULL;
+	struct snd_soc_dpcm *dpcm;
+	struct snd_pcm_substream *be_substream;
+
+	if (stop) {
+		stop_lock_stream(asrc_p2p->substream[0]);
+		stop_lock_stream(asrc_p2p->substream[1]);
+	}
+
+	/* find the be for this fe stream */
+	list_for_each_entry(dpcm, &rtd->dpcm[substream->stream].be_clients, list_be) {
+		struct snd_soc_pcm_runtime *be = dpcm->be;
+		struct snd_soc_dai *dai = be->cpu_dai;
+
+		if (dpcm->fe != rtd)
+			continue;
+
+		be_substream = snd_soc_dpcm_get_substream(be, substream->stream);
+		dma_params_be = snd_soc_dai_get_dma_data(dai, be_substream);
+		dma_params_be->device_reset(be_substream, 0);
+		break;
+	}
+
+	if (stop) {
+		start_unlock_stream(asrc_p2p->substream[1]);
+		start_unlock_stream(asrc_p2p->substream[0]);
+	}
+}
+
 
 /*
  * This function will register the snd_soc_pcm_link drivers.
@@ -389,21 +618,22 @@ static int fsl_asrc_p2p_probe(struct platform_device *pdev)
 	asrc_p2p->asrc_ops.asrc_p2p_release_pair    = asrc_release_pair;
 	asrc_p2p->asrc_ops.asrc_p2p_finish_conv     = asrc_finish_conv;
 
-	asrc_p2p->asrc_index = -1;
+	asrc_p2p->p2p_params[0].asrc_index = -1;
+	asrc_p2p->p2p_params[1].asrc_index = -1;
 
-	iprop_rate = of_get_property(np, "fsl,output-rate", NULL);
+	iprop_rate = of_get_property(np, "fsl,p2p-rate", NULL);
 	if (iprop_rate)
-		asrc_p2p->output_rate = be32_to_cpup(iprop_rate);
+		asrc_p2p->p2p_rate = be32_to_cpup(iprop_rate);
 	else {
-		dev_err(&pdev->dev, "There is no output-rate in dts\n");
+		dev_err(&pdev->dev, "There is no p2p-rate in dts\n");
 		return -EINVAL;
 	}
-	iprop_width = of_get_property(np, "fsl,output-width", NULL);
+	iprop_width = of_get_property(np, "fsl,p2p-width", NULL);
 	if (iprop_width)
-		asrc_p2p->output_width = be32_to_cpup(iprop_width);
+		asrc_p2p->p2p_width = be32_to_cpup(iprop_width);
 
-	if (asrc_p2p->output_width != 16 && asrc_p2p->output_width != 24) {
-		dev_err(&pdev->dev, "output_width is not acceptable\n");
+	if (asrc_p2p->p2p_width != 16 && asrc_p2p->p2p_width != 24) {
+		dev_err(&pdev->dev, "p2p_width is not acceptable\n");
 		return -EINVAL;
 	}
 
@@ -426,6 +656,10 @@ static int fsl_asrc_p2p_probe(struct platform_device *pdev)
 
 	asrc_p2p->dma_params_tx.filter_data = &asrc_p2p->filter_data_tx;
 	asrc_p2p->dma_params_rx.filter_data = &asrc_p2p->filter_data_rx;
+	asrc_p2p->dma_params_tx.check_xrun = fsl_asrc_p2p_check_xrun;
+	asrc_p2p->dma_params_rx.check_xrun = fsl_asrc_p2p_check_xrun;
+	asrc_p2p->dma_params_tx.device_reset = fsl_asrc_p2p_reset;
+	asrc_p2p->dma_params_rx.device_reset = fsl_asrc_p2p_reset;
 
 	platform_set_drvdata(pdev, asrc_p2p);
 

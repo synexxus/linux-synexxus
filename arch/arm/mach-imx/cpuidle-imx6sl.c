@@ -32,6 +32,10 @@ extern void imx6sl_low_power_wfi(void);
 
 extern unsigned long save_ttbr1(void);
 extern void restore_ttbr1(unsigned long ttbr1);
+extern unsigned long iram_tlb_phys_addr;
+extern unsigned long total_suspend_size;
+extern unsigned long mx6sl_lpm_wfi_start asm("mx6sl_lpm_wfi_start");
+extern unsigned long mx6sl_lpm_wfi_end asm("mx6sl_lpm_wfi_end");
 
 static void __iomem *iomux_base;
 static void *wfi_iram_base;
@@ -97,8 +101,8 @@ static struct cpuidle_driver imx6sl_cpuidle_driver = {
 
 int __init imx6sl_cpuidle_init(void)
 {
-	unsigned int iram_paddr;
 	struct device_node *node;
+	u32 wfi_code_size;
 
 	node = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-iomuxc");
 	if (!node) {
@@ -112,13 +116,18 @@ int __init imx6sl_cpuidle_init(void)
 	if (IS_ERR(vbus_ldo))
 		vbus_ldo = NULL;
 
-	iram_paddr = MX6SL_WFI_IRAM_ADDR;
-	/* Calculate the virtual address of the code */
-	wfi_iram_base = (void *)IMX_IO_P2V(MX6Q_IRAM_TLB_BASE_ADDR) +
-				(iram_paddr - MX6Q_IRAM_TLB_BASE_ADDR);
+	wfi_code_size = (&mx6sl_lpm_wfi_end -&mx6sl_lpm_wfi_start) *4;
+
+	/* Get the virtual address of the wfi iram code. */
+	wfi_iram_base = (void *)IMX_IO_P2V(iram_tlb_phys_addr) +
+			total_suspend_size;
+
+	/* Make sure wfi_iram_base is 8 byte aligned. */
+	if ((uintptr_t)(wfi_iram_base) & (FNCPY_ALIGN - 1))
+		wfi_iram_base += FNCPY_ALIGN - ((uintptr_t)wfi_iram_base % (FNCPY_ALIGN));
 
 	imx6sl_wfi_in_iram_fn = (void *)fncpy(wfi_iram_base,
-		&imx6sl_low_power_wfi, MX6SL_WFI_IRAM_CODE_SIZE);
+		&imx6sl_low_power_wfi, wfi_code_size);
 
 	return cpuidle_register(&imx6sl_cpuidle_driver, NULL);
 }

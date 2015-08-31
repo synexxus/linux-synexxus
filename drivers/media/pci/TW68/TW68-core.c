@@ -376,6 +376,7 @@ int videoDMA_pgtable_alloc(struct pci_dev *pci, struct TW68_pgtable *pt)
 	cpu = pci_alloc_consistent(pci, PAGE_SIZE<<3, &dma_addr);   // 8* 4096 contiguous  //*2
 
 	if (NULL == cpu) {
+		pr_err("%s:pci_alloc_consistent failed\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -384,7 +385,7 @@ int videoDMA_pgtable_alloc(struct pci_dev *pci, struct TW68_pgtable *pt)
 	pt->dma  = dma_addr;
 	phy_addr = dma_addr + (PAGE_SIZE<<2) + (PAGE_SIZE<<1);  //6 pages
 
-	pr_debug("%s: cpu:0X%p pt->size: 0x%x BD:0X%x\n", __func__, cpu, pt->size, (unsigned int)pt->cpu + pt->size );
+	pr_debug("%s: cpu:0X%p(%x) pt->size: 0x%x BD:0X%x\n", __func__, cpu, dma_addr, pt->size, (unsigned int)pt->cpu + pt->size );
 
 #if 0
 	for (clean = cpu; (unsigned int)clean < ((unsigned int)pt->cpu + pt->size); clean++ ) {
@@ -525,8 +526,10 @@ void TW68_buffer_finish(struct TW68_dev *dev,
 			   struct TW68_dmaqueue *q,
 			   unsigned int state)
 {
-
-	if (q->dev != dev)	return;
+	if (q->dev != dev) {
+		WARN(1, "dev=%p q=%p q->dev=%p \n", dev, q, q->dev);
+		return;
+	}
 	q->curr->vb.state = state;
 	do_gettimeofday(&q->curr->vb.ts);
 
@@ -539,7 +542,21 @@ void TW68_buffer_next(struct TW68_dev *dev,
 			 struct TW68_dmaqueue *q)
 {
 	struct TW68_buf *buf,*next = NULL;
-	BUG_ON(NULL != q->curr);
+
+	if (q->dev != dev) {
+		WARN(1, "dev=%p q=%p q->dev=%p \n", dev, q, q->dev);
+		return;
+	}
+	if (q->curr) {
+		int nId = q->DMA_nCH;
+		u32 dwRegE, dwRegF;
+
+		dwRegE = reg_readl(DMA_CHANNEL_ENABLE);
+		dwRegF = reg_readl(DMA_CMD);
+
+		WARN(1, "DMA %d  enable=0x%X cmd=0X%X  queue %p\n", nId,  dwRegE, dwRegF, q->curr);
+		TW68_buffer_finish(dev, q, VIDEOBUF_ERROR);
+	}
 
 	if (!list_empty(&q->queued)) {
 		/* activate next one from  dma queue */
@@ -863,6 +880,10 @@ int Field_Copy(struct TW68_dev *dev, int nDMA_channel, int field_PB)
 	if (q->curr) {
 		buf = q->curr;
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		Hmax  = buf->vb.height/2;
 		Wmax  = buf->vb.width;
@@ -929,6 +950,10 @@ int BF_Copy(struct TW68_dev *dev, int nDMA_channel, u32 Fn, u32 PB)
 	{
 		buf = q->curr;
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		Hmax  = buf->vb.height/2;
 		Wmax  = buf->vb.width;
@@ -1009,6 +1034,10 @@ int  QF_Field_Copy(struct TW68_dev *dev, int nDMA_channel, u32 Fn, u32 PB)
 
 
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		for (h = 0; h < Hmax-0; h++) {
 			memcpy(vbuf + pos, srcbuf, stride);
@@ -1275,19 +1304,9 @@ u64 GetDelay(struct TW68_dev *dev, int eno)
 
 void TW68_buffer_timeout(unsigned long data)
 {
-	u32 dwRegE, dwRegF;
 	struct TW68_dmaqueue *q = (struct TW68_dmaqueue*)data;
 	struct TW68_dev *dev = q->dev;
-	//unsigned long flags;
-	int nId = q->DMA_nCH;
 
-	if (q->curr) {
-		dwRegE = reg_readl(DMA_CHANNEL_ENABLE);
-		dwRegF = reg_readl(DMA_CMD);
-
-		pr_debug(" TW68_buffer_timeout ????????  DMA %d  || 0x%X  ||0X%X     timeout on dma queue %p\n", nId,  dwRegE, dwRegF, q->curr);
-		TW68_buffer_finish(dev,q,VIDEOBUF_ERROR);
-	}
 	TW68_buffer_next(dev,q);
 }
 
@@ -1469,35 +1488,35 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 				__func__, dwErrBit, dwRegER, dwRegVP, dwRegST, dwRegE, dwRegF);
 			dev->errlog[0] =  jiffies;
 		} else {
+			unsigned mask;
 			// Normal interrupt:
 			if (dwRegST & (0xFF00) & dev->videoDMA_ID) {
 				TW68_alsa_irq(dev, dwRegST, dwRegPB);
 			}
 
-			if ((dwRegST & (0xFF)) && (!(dwRegER >>16))) {
-				for(k=0; k<8; k++) {
-					if ((dwRegST & dev->videoDMA_ID) & (1 << k)) {     //exclude  inactive dev
-						TW68_irq_video_done(dev, k+1, dwRegPB);
-						if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
-							/*
-								Reg8b <<= 16;
-								dev->video_dmaq[k+1].FieldPB &= 0x0000FFFF;
-								dev->video_dmaq[k+1].FieldPB |= Reg8b;	// add
-								//pr_debug(" IRQ DMA normal ist time  k:%d  Reg8b 0x%x: PB 0x%x  FieldPB 0X%X DMA_CHANNEL_ENABLE %x  DMA_CMD %X \n",
-								//	k, Reg8b, dwRegPB, dev->video_dmaq[k].FieldPB,  dwRegE, dwRegF);
-								if (Reg8b &0x10)
-									dev->video_dmaq[k].FieldPB |= 0xF0;
-							*/
-						}
+			mask = dwRegST & 0xff & dev->videoDMA_ID;
+			while (mask) {
+				k = __ffs(mask);
+				mask &= ~(1 << k);
+				TW68_irq_video_done(dev, k+1, dwRegPB);
+				if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
+					/*
+					Reg8b <<= 16;
+					dev->video_dmaq[k+1].FieldPB &= 0x0000FFFF;
+					dev->video_dmaq[k+1].FieldPB |= Reg8b;	// add
+					//pr_debug(" IRQ DMA normal ist time  k:%d  Reg8b 0x%x: PB 0x%x  FieldPB 0X%X DMA_CHANNEL_ENABLE %x  DMA_CMD %X \n",
+					//	k, Reg8b, dwRegPB, dev->video_dmaq[k].FieldPB,  dwRegE, dwRegF);
+					if (Reg8b &0x10)
+						dev->video_dmaq[k].FieldPB |= 0xF0;
+					 */
+				}
 
-						if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
-							dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
-						} else {
-							dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
-							dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
-							dev->video_dmaq[k+1].FCN++;
-						}
-					}
+				if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
+					dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
+				} else {
+					dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
+					dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
+					dev->video_dmaq[k+1].FCN++;
 				}
 			}
 
@@ -1551,6 +1570,7 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	u32 regDW, val1, k, ChannelOffset, pgn;
 	// Audio P
 	int audio_ch;
+	int ret;
 	u32 dmaP;
 
 	pr_debug(" TW6869 hwinit1 \n");
@@ -1620,18 +1640,23 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 
 	//Trasmit Posted FC credit Status
 	reg_writel(EP_REG_ADDR, 0x730);   //
+	regDW = reg_readl(EP_REG_ADDR);
+	if (regDW != 0x730) {
+		pr_err("%s: expected 0x730, read 0x%x\n", dev->name,  regDW );
+		return -ENODEV;
+	}
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[Posted 0x730]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[Posted 0x730]= 0x%x\n", dev->name,  regDW );
 
 	//Trasnmit Non-Posted FC credit Status
 	reg_writel(EP_REG_ADDR, 0x734);   //
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[Non-Posted 0x734]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[Non-Posted 0x734]= 0x%x\n", dev->name,  regDW );
 
 	//CPL FC credit Status
 	reg_writel(EP_REG_ADDR, 0x738);   //
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[CPL 0x738]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[CPL 0x738]= 0x%x\n", dev->name,  regDW );
 
 	regDW = reg_readl((SYS_SOFT_RST) );
 	//pr_debug("HWinit %s: SYS_SOFT_RST  0x%lx    \n",  dev->name, regDW );
@@ -1649,7 +1674,9 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	reg_writel(PHASE_REF_CONFIG, regDW&0xFFFF );
 
 	//  Allocate PB DMA pagetable  total 16K  filled with 0xFF
-	videoDMA_pgtable_alloc(dev->pci, &dev->m_Page0);
+	ret = videoDMA_pgtable_alloc(dev->pci, &dev->m_Page0);
+	if (ret)
+		return ret;
 	AudioDMA_PB_alloc(dev->pci, &dev->m_AudioBuffer);
 
 	for (k =0; k<8; k++) {
@@ -1725,7 +1752,7 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 
 
 	regDW = reg_readl((DMA_PAGE_TABLE0_ADDR) );
-	pr_debug("DMA %s: DMA_PAGE_TABLE0_ADDR  0x%x    \n",  dev->name, regDW );
+	pr_debug("DMA %s: DMA_PAGE_TABLE0_ADDR  0x%x(%x)    \n",  dev->name, regDW, dev->m_Page0.dma);
 	regDW = reg_readl((DMA_PAGE_TABLE1_ADDR) );
 	pr_debug("DMA %s: DMA_PAGE_TABLE1_ADDR  0x%x    \n",  dev->name, regDW );
 
@@ -1897,6 +1924,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 	if (NULL == dev)
 		return -ENOMEM;
 
+	TW68_video_variable_init(dev);
 	err = v4l2_device_register(&pci_dev->dev, &dev->v4l2_dev);
 	if (err) {
 		pr_err("%s: v4l2_device_register failed %d\n", __func__, err);
@@ -1999,6 +2027,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 
 	// no cache
 	dev->lmmio = ioremap_nocache(pci_resource_start(pci_dev, 0),  pci_resource_len(pci_dev, 0));
+	pr_debug("%s: %s: lmmio %p\n", __func__, dev->name, dev->lmmio);
 
 	dev->bmmio = (__u8 __iomem *)dev->lmmio;
 
@@ -2012,7 +2041,9 @@ static int TW68_initdev(struct pci_dev *pci_dev,
         //  pci_resource_start(pci_dev, 0), (unsigned int)dev->lmmio, (unsigned int)dev->bmmio, (unsigned int)pci_resource_len(pci_dev,0) );
 
 	/* initialize hardware #1 */
-	TW68_hwinit1(dev);
+	err = TW68_hwinit1(dev);
+	if (err)
+		goto fail3;
 	//InitExternal2864(dev);
 	/* get irq */
 	pr_debug("%s: %s: request IRQ %d\n", __func__, dev->name,pci_dev->irq);
@@ -2055,6 +2086,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 	TW68_unregister_video(dev);
 	free_irq(pci_dev->irq, dev);
  fail3:
+	del_timer(&dev->delay_resync);
 	TW68_hwfini(dev);
 	iounmap(dev->lmmio);
  fail2:

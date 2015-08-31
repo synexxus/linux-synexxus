@@ -46,6 +46,8 @@ module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 static int screenres[2] = {1024, 600};
 module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
 
+#define MAX_TOUCHES 12
+
 static void translate(int *px, int *py)
 {
 	int x, y, x1, y1;
@@ -73,21 +75,16 @@ static void translate(int *px, int *py)
 struct point {
 	int	x;
 	int	y;
+	int	id;
 };
 
 struct ft5x06_ts {
 	struct i2c_client *client;
 	struct input_dev	*idev;
-	struct workqueue_struct *wq;
-	struct work_struct work;
-	struct delayed_work reenable_work;
-	int int_disabled;
-	struct semaphore	sem;
 	int			use_count;
 	int			bReady;
 	int			irq;
 	unsigned		gp;
-	int			buttons;
 	struct proc_dir_entry  *procentry;
 };
 static const char *client_name = "ft5x06";
@@ -111,7 +108,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		/* send release to user space. */
 #ifdef USE_ABS_MT
 		input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
-		input_event(idev, EV_KEY, BTN_TOUCH, 0);
 		input_mt_sync(idev);
 #else
 		input_report_abs(idev, ABS_PRESSURE, 0);
@@ -124,6 +120,7 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 #ifdef USE_ABS_MT
 			input_event(idev, EV_ABS, ABS_MT_POSITION_X, p[i].x);
 			input_event(idev, EV_ABS, ABS_MT_POSITION_Y, p[i].y);
+			input_event(idev, EV_ABS, ABS_MT_TRACKING_ID, p[i].id);
 			input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
 			input_mt_sync(idev);
 #else
@@ -134,7 +131,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 			input_sync(idev);
 #endif
 		}
-		input_event(idev, EV_KEY, BTN_TOUCH, 1);
 	}
 #ifdef USE_ABS_MT
 	input_sync(idev);
@@ -173,6 +169,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 #ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
+	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
 	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
@@ -281,32 +278,18 @@ struct file_operations proc_fops = {
 	.write = ft5x06_proc_write,
 };
 
-/*-----------------------------------------------------------------------*/
-static void irq_reenable_work(struct work_struct *work)
+static irqreturn_t ts_interrupt(int irq, void *id)
 {
-	struct ft5x06_ts *ts = container_of(work, struct ft5x06_ts,
-			reenable_work.work);
-
-	if (ts->int_disabled) {
-		ts->int_disabled = 0;
-		enable_irq(ts->irq);
-	}
-}
-
-
-static void ts_work_func(struct work_struct *work)
-{
-	struct ft5x06_ts *ts = container_of(work,
-			struct ft5x06_ts, work);
+	struct ft5x06_ts *ts = id;
 	int ret;
-	struct point points[5];
-	unsigned char buf[33];
+	struct point points[MAX_TOUCHES];
+	unsigned char buf[3+(6*MAX_TOUCHES)];
+
 	unsigned char startch[1] = { 0 };
 	struct i2c_msg readpkt[2] = {
 		{ts->client->addr, 0, 1, startch},
 		{ts->client->addr, I2C_M_RD, sizeof(buf), buf}
 	};
-	int loop_max = 10;
 	int buttons = 0 ;
 
 	while (0 == gpio_get_value(ts->gp)) {
@@ -324,16 +307,20 @@ static void ts_work_func(struct work_struct *work)
 			printHex(buf, sizeof(buf));
 #endif
 			buttons = buf[2];
-			if (buttons > 5) {
-				printk(KERN_ERR
-				       "%s: invalid button count %02x\n",
-				       __func__, buttons);
-				buttons = 0 ;
+			if (buttons > MAX_TOUCHES) {
+				int interrupting = (0 == gpio_get_value(ts->gp));
+				if (interrupting) {
+					printk(KERN_ERR
+					       "%s: invalid button count 0x%02x\n",
+					       __func__, buttons);
+				} /* not garbage from POR */
+				buttons = interrupting ? MAX_TOUCHES : 0;
 			} else {
 				for (i = 0; i < buttons; i++) {
-					points[i].x = ((p[0] << 8)
+					points[i].x = (((p[0] & 0x0f) << 8)
 						       | p[1]) & 0x7ff;
-					points[i].y = ((p[2] << 8)
+					points[i].id = (p[2]>>4);
+					points[i].y = (((p[2] & 0x0f) << 8)
 						       | p[3]) & 0x7ff;
 					p += 6;
 				}
@@ -347,29 +334,7 @@ static void ts_work_func(struct work_struct *work)
 		       client_name, buttons, points[0].x, points[0].y);
 #endif
 		ts_evt_add(ts, buttons, points);
-		if (--loop_max == 0)
-			goto error;
 	}
-	ts->int_disabled = 0;
-	ts->buttons = buttons;
-	enable_irq(ts->irq);
-	return;
-error:
-	schedule_delayed_work(&ts->reenable_work, 100);
-	return;
-}
-
-/*
- * We only detect samples ready with this interrupt
- * handler, and even then we just schedule our task.
- */
-static irqreturn_t ts_interrupt(int irq, void *id)
-{
-	struct ft5x06_ts *ts = id;
-
-	disable_irq_nosync(ts->client->irq);
-	ts->int_disabled = 1;
-	queue_work(ts->wq, &ts->work);
 	return IRQ_HANDLED;
 }
 
@@ -420,17 +385,14 @@ static int ts_startup(struct ft5x06_ts *ts)
 	if (ts == NULL)
 		return -EIO;
 
-	if (down_interruptible(&ts->sem))
-		return -EINTR;
-
 	if (ts->use_count++ != 0)
 		goto out;
 
-	ret = request_irq(ts->irq, &ts_interrupt, IRQF_TRIGGER_FALLING,
-			  client_name, ts);
+	ret = request_threaded_irq(ts->irq, NULL, ts_interrupt,
+				     IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				     client_name, ts);
 	if (ret) {
-		printk(KERN_ERR "%s: request_irq failed, irq:%i\n",
-		       client_name, ts->irq);
+		pr_err("%s: error requesting irq %d\n", __func__, ts->irq);
 		goto out;
 	}
 
@@ -453,7 +415,6 @@ static int ts_startup(struct ft5x06_ts *ts)
  out:
 	if (ret)
 		ts->use_count--;
-	up(&ts->sem);
 	return ret;
 }
 
@@ -463,13 +424,9 @@ static int ts_startup(struct ft5x06_ts *ts)
 static void ts_shutdown(struct ft5x06_ts *ts)
 {
 	if (ts) {
-		down(&ts->sem);
 		if (--ts->use_count == 0) {
-			cancel_work_sync(&ts->work);
-			cancel_delayed_work_sync(&ts->reenable_work);
 			free_irq(ts->irq, ts);
 		}
-		up(&ts->sem);
 	}
 }
 /*-----------------------------------------------------------------------*/
@@ -523,7 +480,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		dev_err(dev, "Couldn't allocate memory for %s\n", client_name);
 		return -ENOMEM;
 	}
-	sema_init(&ts->sem, 1);
 	ts->client = client;
 	ts->irq = client->irq ;
 	ts->gp = of_get_named_gpio(np, "wakeup-gpios", 0);
@@ -538,15 +494,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return err;
 	}
 
-	ts->wq = create_singlethread_workqueue("ft5x06_wq");
-	if (!ts->wq) {
-		pr_err("%s: create workqueue failed\n", __func__);
-		err = -ENOMEM;
-		goto err_create_wq_failed;
-	}
-	INIT_WORK(&ts->work, ts_work_func);
-	INIT_DELAYED_WORK(&ts->reenable_work, irq_reenable_work);
-
 	printk(KERN_INFO "%s: %s touchscreen irq=%i, gp=%i\n", __func__,
 	       client_name, ts->irq, ts->gp);
 	i2c_set_clientdata(client, ts);
@@ -557,7 +504,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 					    &proc_fops);
 		return 0;
 	}
-err_create_wq_failed:
+
 	printk(KERN_WARNING "%s: ts_register failed\n", client_name);
 	ts_deregister(ts);
 	kfree(ts);
@@ -570,12 +517,11 @@ static int ts_remove(struct i2c_client *client)
 	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
+		gpio_free(ts->gp);
 		ts_deregister(ts);
 	} else {
 		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
 	}
-	if (ts->wq)
-		destroy_workqueue(ts->wq);
 	kfree(ts);
 	return 0;
 }

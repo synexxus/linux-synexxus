@@ -13,6 +13,11 @@
 
 / {
 	aliases {
+		csi0 = &csi1;
+		mmc0 = &usdhc1;
+		mmc1 = &usdhc2;
+		mmc2 = &usdhc3;
+		mmc3 = &usdhc4;
 		serial0 = &uart1;
 		serial1 = &uart2;
 		serial2 = &uart3;
@@ -185,6 +190,8 @@
 					clocks = <&clks IMX6SL_CLK_ECSPI1>,
 						 <&clks IMX6SL_CLK_ECSPI1>;
 					clock-names = "ipg", "per";
+					dmas = <&sdma 3 7 1>, <&sdma 4 7 2>;
+					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -197,6 +204,8 @@
 					clocks = <&clks IMX6SL_CLK_ECSPI2>,
 						 <&clks IMX6SL_CLK_ECSPI2>;
 					clock-names = "ipg", "per";
+					dmas = <&sdma 5 7 1>, <&sdma 6 7 2>;
+					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -209,6 +218,8 @@
 					clocks = <&clks IMX6SL_CLK_ECSPI3>,
 						 <&clks IMX6SL_CLK_ECSPI3>;
 					clock-names = "ipg", "per";
+					dmas = <&sdma 7 7 1>, <&sdma 8 7 2>;
+					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -221,6 +232,8 @@
 					clocks = <&clks IMX6SL_CLK_ECSPI4>,
 						 <&clks IMX6SL_CLK_ECSPI4>;
 					clock-names = "ipg", "per";
+					dmas = <&sdma 9 7 1>, <&sdma 10 7 2>;
+					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -468,20 +481,21 @@
 					anatop-min-bit-val = <4>;
 					anatop-min-voltage = <800000>;
 					anatop-max-voltage = <1375000>;
+					anatop-enable-bit = <0>;
 				};
 
-				regulator-3p0@120 {
+				reg_3p0: regulator-3p0@120 {
 					compatible = "fsl,anatop-regulator";
 					regulator-name = "vdd3p0";
-					regulator-min-microvolt = <2800000>;
-					regulator-max-microvolt = <3150000>;
-					regulator-always-on;
+					regulator-min-microvolt = <2625000>;
+					regulator-max-microvolt = <3400000>;
 					anatop-reg-offset = <0x120>;
 					anatop-vol-bit-shift = <8>;
 					anatop-vol-bit-width = <5>;
 					anatop-min-bit-val = <0>;
 					anatop-min-voltage = <2625000>;
 					anatop-max-voltage = <3400000>;
+					anatop-enable-bit = <0>;
 				};
 
 				regulator-2p5@130 {
@@ -496,6 +510,7 @@
 					anatop-min-bit-val = <0>;
 					anatop-min-voltage = <2100000>;
 					anatop-max-voltage = <2850000>;
+					anatop-enable-bit = <0>;
 				};
 
 				reg_arm: regulator-vddcore@140 {
@@ -562,6 +577,7 @@
 				reg = <0x020c9000 0x1000>;
 				interrupts = <0 44 0x04>;
 				clocks = <&clks IMX6SL_CLK_USBPHY1>;
+				phy-3p0-supply = <&reg_3p0>;
 				fsl,anatop = <&anatop>;
 			};
 
@@ -570,6 +586,7 @@
 				reg = <0x020ca000 0x1000>;
 				interrupts = <0 45 0x04>;
 				clocks = <&clks IMX6SL_CLK_USBPHY2>;
+				phy-3p0-supply = <&reg_3p0>;
 				fsl,anatop = <&anatop>;
 			};
 
@@ -609,10 +626,25 @@
 				#reset-cells = <1>;
 			};
 
-			ocram: sram@00904000 {
-				compatible = "mmio-sram";
-				reg = <0x00904000 0x1C000>;
+			ocrams: sram@00900000 {
+				compatible = "fsl,lpm-sram";
+				reg = <0x00900000 0x4000>;
 				clocks = <&clks IMX6SL_CLK_OCRAM>;
+				clock-names = "ocram";
+			};
+
+			ocrams_ddr: sram@00904000 {
+				compatible = "fsl,ddr-lpm-sram";
+				reg = <0x00904000 0x1000>;
+				clocks = <&clks IMX6SL_CLK_OCRAM>;
+				clock-names = "ocram";
+			};
+
+			ocram: sram@00905000 {
+				compatible = "mmio-sram";
+				reg = <0x00905000 0x1B000>;
+				clocks = <&clks IMX6SL_CLK_OCRAM>;
+				clock-names = "ocram";
 			};
 
 			gpc: gpc@020dc000 {
@@ -638,10 +670,14 @@
 				reg = <0x020e0000 0x4000>;
 			};
 
-			csi: csi@020e4000 {
+			csi1: csi@020e4000 {
 				compatible = "fsl,imx6sl-csi";
 				reg = <0x020e4000 0x4000>;
 				interrupts = <0 7 0x04>;
+				clocks = <&clks IMX6SL_CLK_DUMMY>,
+					<&clks IMX6SL_CLK_DUMMY>,
+					<&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "disp-axi", "csi_mclk", "dcic";
 				status = "disabled";
 			};
 
@@ -667,8 +703,8 @@
 				compatible = "fsl,imx6sl-pxp-dma", "fsl,imx6dl-pxp-dma";
 				reg = <0x020f0000 0x4000>;
 				interrupts = <0 98 0x04>;
-				clocks = <&clks 111>;
-				clock-names = "pxp-axi";
+				clocks = <&clks IMX6SL_CLK_PXP_AXI>, <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pxp-axi", "disp-axi";
 				status = "disabled";
 			};
 
@@ -686,8 +722,9 @@
 				reg = <0x020f8000 0x4000>;
 				interrupts = <0 39 0x04>;
 				clocks = <&clks IMX6SL_CLK_LCDIF_PIX>,
-					 <&clks IMX6SL_CLK_LCDIF_AXI>;
-				clock-names = "pix", "axi";
+					 <&clks IMX6SL_CLK_LCDIF_AXI>,
+					 <&clks IMX6SL_CLK_DUMMY>;
+				clock-names = "pix", "axi", "disp_axi";
 				status = "disabled";
 			};
 
@@ -853,6 +890,7 @@
 			ocotp: ocotp-ctrl@021bc000 {
 				compatible = "syscon";
 				reg = <0x021bc000 0x4000>;
+				clocks = <&clks IMX6SL_CLK_OCOTP>;
 			};
 
 			ocotp-fuse@021bc000 {
@@ -902,7 +940,7 @@
 		};
 	};
 
-	csi {
+	csi1 {
 		pinctrl_csi_0: csigrp-0 {
 			fsl,pins = <
 				MX6SL_PAD_EPDC_GDRL__CSI_MCLK	0x110b0
@@ -1117,6 +1155,26 @@
 			fsl,pins = <
 				MX6SL_PAD_UART1_RXD__UART1_RX_DATA 0x1b0b1
 				MX6SL_PAD_UART1_TXD__UART1_TX_DATA 0x1b0b1
+			>;
+		};
+	};
+
+	uart4 {
+		pinctrl_uart4_1: uart4grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_SD1_DAT4__UART4_RX_DATA 0x1b0b1
+				MX6SL_PAD_SD1_DAT5__UART4_TX_DATA 0x1b0b1
+				MX6SL_PAD_SD1_DAT7__UART4_CTS_B   0x1b0b1
+				MX6SL_PAD_SD1_DAT6__UART4_RTS_B   0x1b0b1
+			>;
+		};
+
+		pinctrl_uart4dte_1: uart4dtegrp-1 {
+			fsl,pins = <
+				MX6SL_PAD_SD1_DAT5__UART4_RX_DATA 0x1b0b1
+				MX6SL_PAD_SD1_DAT4__UART4_TX_DATA 0x1b0b1
+				MX6SL_PAD_SD1_DAT6__UART4_CTS_B   0x1b0b1
+				MX6SL_PAD_SD1_DAT7__UART4_RTS_B   0x1b0b1
 			>;
 		};
 	};

@@ -1081,6 +1081,15 @@ int of_property_count_strings(struct device_node *np, const char *propname)
 }
 EXPORT_SYMBOL_GPL(of_property_count_strings);
 
+void of_print_phandle_args(const char *msg, const struct of_phandle_args *args)
+{
+	int i;
+	printk("%s %s", msg, of_node_full_name(args->np));
+	for (i = 0; i < args->args_count; i++)
+		printk(i ? ",%08x" : ":%08x", args->args[i]);
+	printk("\n");
+}
+
 /**
  * of_parse_phandle - Resolve a phandle property to a device_node pointer
  * @np: Pointer to device node holding phandle property
@@ -1577,6 +1586,35 @@ static void of_alias_add(struct alias_prop *ap, struct device_node *np,
 	list_add_tail(&ap->link, &aliases_lookup);
 	pr_debug("adding DT alias:%s: stem=%s id=%i node=%s\n",
 		 ap->alias, ap->stem, ap->id, of_node_full_name(np));
+}
+
+/*
+ * of_alias_max_index() - get the maximum index for a given alias stem
+ * @stem:   The alias stem for which the maximum index is searched for
+ *
+ * Given an alias stem (the alias without the number) this function
+ * returns the maximum number for which an alias exists.
+ *
+ * Return: The maximum existing alias index or -ENODEV if no alias
+ *         exists for this stem.
+ */
+int of_alias_max_index(const char *stem)
+{
+	struct alias_prop *app;
+	int max = -ENODEV;
+
+	mutex_lock(&of_aliases_mutex);
+
+	list_for_each_entry(app, &aliases_lookup, link) {
+		if (strcmp(app->stem, stem))
+			continue;
+		if (app->id > max)
+			max = app->id;
+	}
+
+	mutex_unlock(&of_aliases_mutex);
+
+	return max;
 }
 
 /**

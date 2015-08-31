@@ -843,8 +843,16 @@ static void rtl_unlock_work(struct rtl8169_private *tp)
 
 static void rtl_tx_performance_tweak(struct pci_dev *pdev, u16 force)
 {
+	u16 ctl;
+
+	pcie_capability_read_word(pdev, PCI_EXP_DEVCTL, &ctl);
+	dev_info(&pdev->dev, "MRRS = %d, MPS = %d\n",
+		128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12),
+		128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+#if 0
 	pcie_capability_clear_and_set_word(pdev, PCI_EXP_DEVCTL,
 					   PCI_EXP_DEVCTL_READRQ, force);
+#endif
 }
 
 struct rtl_cond {
@@ -3455,6 +3463,11 @@ static void rtl8168g_1_hw_phy_config(struct rtl8169_private *tp)
 	rtl_writephy(tp, 0x14, 0x1065);
 	rtl_writephy(tp, 0x14, 0x9065);
 	rtl_writephy(tp, 0x14, 0x1065);
+
+	/* Check ALDPS bit, disable it if enabled */
+	rtl_writephy(tp, 0x1f, 0x0a43);
+	if (rtl_readphy(tp, 0x10) & 0x0004)
+		rtl_w1w0_phy(tp, 0x10, 0x0000, 0x0004);
 
 	rtl_writephy(tp, 0x1f, 0x0000);
 }

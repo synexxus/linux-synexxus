@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,6 +14,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/opp.h>
+#include <linux/reboot.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
@@ -32,7 +33,7 @@ static struct clk *pll2_pfd2_396m_clk;
 static struct device *cpu_dev;
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int transition_latency;
-static struct mutex set_cpufreq_lock;
+DEFINE_MUTEX(set_cpufreq_lock);
 
 struct soc_opp {
 	u32 arm_freq;
@@ -41,6 +42,7 @@ struct soc_opp {
 
 static struct soc_opp *imx6_soc_opp;
 static u32 soc_opp_count;
+static int num;
 
 static int imx6_verify_speed(struct cpufreq_policy *policy)
 {
@@ -122,7 +124,7 @@ static int imx6_set_target(struct cpufreq_policy *policy,
 
 	/* scaling up?  scale voltage before frequency */
 	if (freqs.new > freqs.old) {
-		if (regulator_is_enabled(pu_reg)) {
+		if (!IS_ERR(pu_reg) && regulator_is_enabled(pu_reg)) {
 			ret = regulator_set_voltage_tol(pu_reg,
 					imx6_soc_opp[soc_opp_index].soc_volt,
 					0);
@@ -187,7 +189,7 @@ static int imx6_set_target(struct cpufreq_policy *policy,
 			goto err1;
 		}
 
-		if (regulator_is_enabled(pu_reg)) {
+		if (!IS_ERR(pu_reg) && regulator_is_enabled(pu_reg)) {
 			ret = regulator_set_voltage_tol(pu_reg,
 					imx6_soc_opp[soc_opp_index].soc_volt,
 					0);
@@ -290,15 +292,36 @@ static struct notifier_block imx6_cpufreq_pm_notifier = {
 	.notifier_call = imx6_cpufreq_pm_notify,
 };
 
+static int imx6_cpufreq_reboot_notify(struct notifier_block *this,
+			    unsigned long event, void *dummy)
+{
+	struct cpufreq_policy *data = cpufreq_cpu_get(0);
+
+	/* raise up cpu clock to the highest setpoint before reboot */
+	if (event == SYS_RESTART || event == SYS_HALT ||
+		event == SYS_POWER_OFF) {
+		data->user_policy.min = data->user_policy.max =
+					freq_table[num - 1].frequency;
+		cpufreq_update_policy(0);
+		disable_cpufreq();
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block imx6_cpufreq_reboot_notifier = {
+	.notifier_call = imx6_cpufreq_reboot_notify,
+};
+
 static int imx6_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *np;
 	struct opp *opp;
 	unsigned long min_volt = 0, max_volt = 0;
-	int num, ret;
+	int ret;
 	const struct property *prop;
 	const __be32 *val;
-	u32 nr, i;
+	u32 nr, i = 0;
 
 	cpu_dev = &pdev->dev;
 
@@ -325,11 +348,21 @@ static int imx6_cpufreq_probe(struct platform_device *pdev)
 	arm_reg = devm_regulator_get(cpu_dev, "arm");
 	pu_reg = devm_regulator_get(cpu_dev, "pu");
 	soc_reg = devm_regulator_get(cpu_dev, "soc");
-	if (IS_ERR(arm_reg) || IS_ERR(pu_reg) || IS_ERR(soc_reg)) {
+	if (IS_ERR(arm_reg) || IS_ERR(soc_reg)) {
 		dev_err(cpu_dev, "failed to get regulators\n");
 		ret = -ENOENT;
 		goto put_node;
 	}
+	/*
+	 * soc_reg sync  with arm_reg if arm shares the same regulator
+	 * with soc. Otherwise, regulator common framework will refuse to update
+	 * this consumer's voltage right now while another consumer voltage
+	 * still keep in old one. For example, imx6sx-sdb with pfuze200 in
+	 * ldo-bypass mode.
+	 */
+	of_property_read_u32(np, "fsl,arm-soc-shared", &i);
+	if (i == 1)
+		soc_reg = arm_reg;
 
 	/* We expect an OPP table supplied by platform */
 	num = opp_get_opp_count(cpu_dev);
@@ -405,6 +438,12 @@ static int imx6_cpufreq_probe(struct platform_device *pdev)
 		}
 		imx6_soc_opp[i].arm_freq = freq;
 		imx6_soc_opp[i].soc_volt = volt;
+#ifdef CONFIG_MX6_VPU_352M
+		if (imx6_soc_opp[i].arm_freq == 792000) {
+			pr_info("increase SOC/PU voltage for VPU352MHz\n");
+			imx6_soc_opp[i].soc_volt = 1250000;
+		}
+#endif
 		soc_opp_count++;
 	}
 	rcu_read_unlock();
@@ -420,9 +459,11 @@ static int imx6_cpufreq_probe(struct platform_device *pdev)
 	if (ret > 0)
 		transition_latency += ret * 1000;
 
-	ret = regulator_set_voltage_time(pu_reg, min_volt, max_volt);
-	if (ret > 0)
-		transition_latency += ret * 1000;
+	if (!IS_ERR(pu_reg)) {
+		ret = regulator_set_voltage_time(pu_reg, min_volt, max_volt);
+		if (ret > 0)
+			transition_latency += ret * 1000;
+	}
 
 	/*
 	 * OPP is maintained in order of increasing frequency, and
@@ -441,8 +482,8 @@ static int imx6_cpufreq_probe(struct platform_device *pdev)
 	if (ret > 0)
 		transition_latency += ret * 1000;
 
-	mutex_init(&set_cpufreq_lock);
 	register_pm_notifier(&imx6_cpufreq_pm_notifier);
+	register_reboot_notifier(&imx6_cpufreq_reboot_notifier);
 
 	ret = cpufreq_register_driver(&imx6_cpufreq_driver);
 	if (ret) {

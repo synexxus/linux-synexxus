@@ -158,6 +158,7 @@ struct mxc_hdmi {
 	struct fb_info *fbi;
 	struct clk *hdmi_isfr_clk;
 	struct clk *hdmi_iahb_clk;
+	struct clk *mipi_core_clk;
 	struct delayed_work hotplug_work;
 	struct delayed_work hdcp_hdp_work;
 
@@ -167,6 +168,8 @@ struct mxc_hdmi {
 	int vic;
 	struct mxc_edid_cfg edid_cfg;
 	u8 edid[HDMI_EDID_LEN];
+	u8 *override_edid;
+	int override_edid_length;
 	bool fb_reg;
 	bool cable_plugin;
 	u8  blank;
@@ -939,7 +942,7 @@ static u8 hdmi_edid_i2c_read(struct mxc_hdmi *hdmi,
 		hdmi_writeb(HDMI_I2CM_OPERATION_READ_EXT,
 			HDMI_I2CM_OPERATION);
 
-	hdmi_edid_wait_i2c_done(hdmi, 1000);
+	hdmi_edid_wait_i2c_done(hdmi, 30);
 	data = hdmi_readb(HDMI_I2CM_DATAI);
 	hdmi_writeb(0xFF, HDMI_IH_I2CM_STAT0);
 	return data;
@@ -1513,6 +1516,64 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
+static int mxc_edid_override(struct mxc_hdmi *hdmi, unsigned char *edid,
+			struct mxc_edid_cfg *cfg, struct fb_info *fbi,
+			unsigned char *override, int override_length)
+{
+	int extblknum;
+	int j, ret;
+
+	if (!edid || !cfg || !fbi)
+		return -EINVAL;
+
+	/* reset edid data zero */
+	memset(edid, 0, EDID_LENGTH*4);
+	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
+
+	/* Check first three byte of EDID head */
+	if ((override_length < 128) ||
+	    (override[0] != 0x00) ||
+	    (override[1] != 0xFF) ||
+	    (override[2] != 0xFF)) {
+		dev_info(&hdmi->pdev->dev, "EDID head check failed!");
+		return -ENOENT;
+	}
+
+	memcpy(edid, override, 128);
+
+	extblknum = edid[0x7E];
+	if (extblknum == 255)
+		extblknum = 0;
+	if (((extblknum + 1) * 128) > override_length)
+		extblknum = (override_length >> 7) - 1;
+
+	if (extblknum)
+		memcpy(&edid[EDID_LENGTH], &override[128], 128);
+
+	/* edid first block parsing */
+	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
+	fb_edid_to_monspecs(edid, &fbi->monspecs);
+
+	if (extblknum) {
+		ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
+				cfg, &fbi->monspecs);
+		if (ret < 0)
+			return -ENOENT;
+	}
+
+	/* need read segment block? */
+	if (extblknum > 1) {
+		for (j = 2; j <= extblknum; j++) {
+			/* edid ext block parsing */
+			ret = mxc_edid_parse_ext_blk(&override[j * 128],
+					cfg, &fbi->monspecs);
+			if (ret < 0)
+				return -ENOENT;
+		}
+	}
+	return 0;
+}
+
 static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
 			struct mxc_edid_cfg *cfg, struct fb_info *fbi)
 {
@@ -1567,8 +1628,8 @@ static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
 	}
 
 	extblknum = edid[0x7E];
-	if (extblknum < 0)
-		return extblknum;
+	if (extblknum == 255)
+		extblknum = 0;
 
 	if (extblknum) {
 		ediddata = edid + EDID_LENGTH;
@@ -1582,19 +1643,21 @@ static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
 	memset(&fbi->monspecs, 0, sizeof(fbi->monspecs));
 	fb_edid_to_monspecs(edid, &fbi->monspecs);
 
-	ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
-			cfg, &fbi->monspecs);
-	if (ret < 0)
-		return -ENOENT;
+	if (extblknum) {
+		ret = mxc_edid_parse_ext_blk(edid + EDID_LENGTH,
+				cfg, &fbi->monspecs);
+		if (ret < 0)
+			return -ENOENT;
+	}
 
 	/* need read segment block? */
 	if (extblknum > 1) {
-		for (j = 1; j <= extblknum; j++) {
+		for (j = 2; j <= extblknum; j++) {
 			for (i = 0; i < 128; i++)
-				*(tmpedid + 1) = hdmi_edid_i2c_read(hdmi, i, j);
+				tmpedid[i] = hdmi_edid_i2c_read(hdmi, i, j);
 
 			/* edid ext block parsing */
-			ret = mxc_edid_parse_ext_blk(tmpedid + EDID_LENGTH,
+			ret = mxc_edid_parse_ext_blk(tmpedid,
 					cfg, &fbi->monspecs);
 			if (ret < 0)
 				return -ENOENT;
@@ -1606,7 +1669,7 @@ static int mxc_edid_read_internal(struct mxc_hdmi *hdmi, unsigned char *edid,
 
 static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 {
-	int ret;
+	int ret = -EINVAL;
 	u8 edid_old[HDMI_EDID_LEN];
 	u8 clkdis;
 
@@ -1615,11 +1678,18 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 	/* save old edid */
 	memcpy(edid_old, hdmi->edid, HDMI_EDID_LEN);
 
-	/* Read EDID via HDMI DDC when HDCP Enable */
-	if (!hdcp_init)
+	if (hdmi->override_edid) {
+		ret = mxc_edid_override(hdmi, hdmi->edid, &hdmi->edid_cfg,
+				hdmi->fbi, hdmi->override_edid,
+				hdmi->override_edid_length);
+	}
+
+	if (!ret) {
+	} else if (!hdcp_init) {
 		ret = mxc_edid_read(hdmi_i2c->adapter, hdmi_i2c->addr,
 				hdmi->edid, &hdmi->edid_cfg, hdmi->fbi);
-	else {
+	} else {
+		/* Read EDID via HDMI DDC when HDCP Enable */
 
 		/* Disable HDCP clk */
 		if (hdmi->hdmi_data.hdcp_enable) {
@@ -1639,8 +1709,10 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 		}
 
 	}
-	if (ret < 0)
+	if (ret < 0) {
+		dev_dbg(&hdmi->pdev->dev, "read failed\n");
 		return HDMI_EDID_FAIL;
+	}
 
 	/* Save edid cfg for audio driver */
 	hdmi_set_edid_cfg(&hdmi->edid_cfg);
@@ -1820,6 +1892,8 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		}
 	}
 
+	fb_new_modelist(hdmi->fbi);
+
 	console_unlock();
 }
 
@@ -1837,7 +1911,6 @@ static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
 	/* If not EDID data read, set up default modelist  */
-	dev_info(&hdmi->pdev->dev, "No modes read from edid\n");
 	dev_info(&hdmi->pdev->dev, "create default modelist\n");
 
 	console_lock();
@@ -1850,6 +1923,8 @@ static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 		if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0))
 			fb_add_videomode(mode, &hdmi->fbi->modelist);
 	}
+
+	fb_new_modelist(hdmi->fbi);
 
 	console_unlock();
 }
@@ -1923,8 +1998,14 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	/* Read EDID again if first EDID read failed */
 	if (edid_status == HDMI_EDID_NO_MODES ||
 			edid_status == HDMI_EDID_FAIL) {
+		int retry_status;
 		dev_info(&hdmi->pdev->dev, "Read EDID again\n");
-		edid_status = mxc_hdmi_read_edid(hdmi);
+		msleep(200);
+		retry_status = mxc_hdmi_read_edid(hdmi);
+		/* If we get NO_MODES on the 1st and SAME on the 2nd attempt we
+		 * want NO_MODES as final result. */
+		if (retry_status != HDMI_EDID_SAME)
+			edid_status = retry_status;
 	}
 
 	/* HDMI Initialization Steps D, E, F */
@@ -1953,14 +2034,16 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
-static int mxc_hdmi_power_on(struct mxc_dispdrv_handle *disp)
+static int mxc_hdmi_power_on(struct mxc_dispdrv_handle *disp,
+			     struct fb_info *fbi)
 {
 	struct mxc_hdmi *hdmi = mxc_dispdrv_getdata(disp);
 	mxc_hdmi_phy_init(hdmi);
 	return 0;
 }
 
-static void mxc_hdmi_power_off(struct mxc_dispdrv_handle *disp)
+static void mxc_hdmi_power_off(struct mxc_dispdrv_handle *disp,
+			       struct fb_info *fbi)
 {
 	struct mxc_hdmi *hdmi = mxc_dispdrv_getdata(disp);
 	mxc_hdmi_phy_disable(hdmi);
@@ -2337,6 +2420,7 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 			mxc_hdmi_phy_disable(hdmi);
 			clk_disable(hdmi->hdmi_iahb_clk);
 			clk_disable(hdmi->hdmi_isfr_clk);
+			clk_disable(hdmi->mipi_core_clk);
 		}
 		break;
 
@@ -2345,6 +2429,7 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 			"event=FB_EVENT_RESUME\n");
 
 		if (hdmi->blank == FB_BLANK_UNBLANK) {
+			clk_enable(hdmi->mipi_core_clk);
 			clk_enable(hdmi->hdmi_iahb_clk);
 			clk_enable(hdmi->hdmi_isfr_clk);
 			mxc_hdmi_phy_init(hdmi);
@@ -2463,8 +2548,11 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	/* Setting HDMI default to blank state */
 	hdmi->blank = FB_BLANK_POWERDOWN;
 
-	setting->dev_id = mxc_hdmi_ipu_id;
-	setting->disp_id = mxc_hdmi_disp_id;
+	ret = ipu_di_to_crtc(&hdmi->pdev->dev, mxc_hdmi_ipu_id,
+			     mxc_hdmi_disp_id, &setting->crtc);
+	if (ret < 0)
+		return ret;
+
 	setting->if_fmt = IPU_PIX_FMT_RGB24;
 
 	hdmi->dft_mode_str = setting->dft_mode_str;
@@ -2475,6 +2563,21 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	hdmi->fbi = setting->fbi;
 
 	hdmi_init_route(hdmi);
+
+	hdmi->mipi_core_clk = clk_get(&hdmi->pdev->dev, "mipi_core");
+	if (IS_ERR(hdmi->mipi_core_clk)) {
+		ret = PTR_ERR(hdmi->mipi_core_clk);
+		dev_err(&hdmi->pdev->dev,
+			"Unable to get mipi core clk: %d\n", ret);
+		goto egetclk;
+	}
+
+	ret = clk_prepare_enable(hdmi->mipi_core_clk);
+	if (ret < 0) {
+		dev_err(&hdmi->pdev->dev,
+				"Cannot enable mipi core clock: %d\n", ret);
+		goto erate;
+	}
 
 	hdmi->hdmi_isfr_clk = clk_get(&hdmi->pdev->dev, "hdmi_isfr");
 	if (IS_ERR(hdmi->hdmi_isfr_clk)) {
@@ -2641,6 +2744,10 @@ egetclk2:
 erate1:
 	clk_put(hdmi->hdmi_isfr_clk);
 egetclk1:
+	clk_disable_unprepare(hdmi->mipi_core_clk);
+erate:
+	clk_put(hdmi->mipi_core_clk);
+egetclk:
 	dev_dbg(&hdmi->pdev->dev, "%s error exit\n", __func__);
 
 	return ret;
@@ -2658,6 +2765,8 @@ static void mxc_hdmi_disp_deinit(struct mxc_dispdrv_handle *disp)
 	clk_put(hdmi->hdmi_isfr_clk);
 	clk_disable_unprepare(hdmi->hdmi_iahb_clk);
 	clk_put(hdmi->hdmi_iahb_clk);
+	clk_disable_unprepare(hdmi->mipi_core_clk);
+	clk_put(hdmi->mipi_core_clk);
 
 	platform_device_unregister(hdmi->pdev);
 
@@ -2718,6 +2827,8 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 	struct device *temp_class;
 	struct resource *res;
 	int ret = 0;
+	struct device_node *np = pdev->dev.of_node;
+	struct property *pp;
 
 	/* Check I2C driver is loaded and available
 	 * check hdcp function is enable by dts */
@@ -2738,6 +2849,15 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 		goto ealloc;
 	}
 	g_hdmi = hdmi;
+
+	pp = of_find_property(np, "override_edid", NULL);
+	if (pp && pp->length) {
+		hdmi->override_edid_length = pp->length;
+		hdmi->override_edid = devm_kzalloc(&pdev->dev, pp->length,
+				GFP_KERNEL);
+		if (hdmi->override_edid)
+			memcpy(hdmi->override_edid, pp->value, pp->length);
+	}
 
 	hdmi_major = register_chrdev(hdmi_major, "mxc_hdmi", &mxc_hdmi_fops);
 	if (hdmi_major < 0) {

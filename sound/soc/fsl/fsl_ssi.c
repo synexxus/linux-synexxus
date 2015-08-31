@@ -53,9 +53,13 @@ static inline void write_ssi_mask(u32 __iomem *addr, u32 clear, u32 set)
 }
 #endif
 
-#ifdef DEBUG
+static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai,
+		struct snd_pcm_hw_params *hw_params);
+
 #define NUM_OF_SSI_REG (sizeof(struct ccsr_ssi) / sizeof(__be32))
 
+#ifdef DEBUG
 void dump_reg(struct ccsr_ssi __iomem *ssi)
 {
 	u32 val, i;
@@ -142,6 +146,8 @@ struct fsl_ssi_private {
 	spinlock_t baudclk_lock;
 	struct clk *coreclk;
 	struct clk *clk;
+	unsigned int bitclk_freq;
+	unsigned int baudclk_streams;
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
 
@@ -169,8 +175,24 @@ struct fsl_ssi_private {
 		unsigned int tfe0;
 	} stats;
 
+	u32 regcache[NUM_OF_SSI_REG];
 	char name[1];
 };
+
+static bool fsl_ssi_volatile_reg(unsigned int reg)
+{
+	switch (reg) {
+	case 0x0:	/* stx0 */
+	case 0x4:	/* stx1 */
+	case 0x8:	/* srx0 */
+	case 0xc:	/* srx1 */
+	case 0x14:	/* sisr */
+	case 0x50:	/* saccst */
+		return true;
+	default:
+		return false;
+	}
+}
 
 /**
  * fsl_ssi_isr: SSI interrupt handler
@@ -337,7 +359,6 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		pm_runtime_get_sync(dai->dev);
 
 		clk_prepare_enable(ssi_private->coreclk);
-		clk_prepare_enable(ssi_private->clk);
 
 		/* When using dual fifo mode, it would be safer if we ensure
 		 * its period size to be an even number. If appearing to an
@@ -468,6 +489,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	u32 wl = CCSR_SSI_SxCCR_WL(sample_size);
 	int enabled = read_ssi(&ssi->scr) & CCSR_SSI_SCR_SSIEN;
 	unsigned int channels = params_channels(hw_params);
+	int ret;
 
 	/*
 	 * If we're in synchronous mode, and the SSI is already enabled,
@@ -476,6 +498,20 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
 		return 0;
 
+	if (ssi_private->i2s_mode == CCSR_SSI_SCR_I2S_MODE_MASTER) {
+		ret = fsl_ssi_set_bclk(substream, cpu_dai, hw_params);
+		if (ret)
+			return ret;
+
+		/* Do not enable the clock if it is already enabled */
+		if (!(ssi_private->baudclk_streams & BIT(substream->stream))) {
+			ret = clk_prepare_enable(ssi_private->clk);
+			if (ret)
+				return ret;
+
+			ssi_private->baudclk_streams |= BIT(substream->stream);
+		}
+	}
 	/*
 	 * FIXME: The documentation says that SxCCR[WL] should not be
 	 * modified while the SSI is enabled.  The only time this can
@@ -495,6 +531,22 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 
 	write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_NET | CCSR_SSI_SCR_I2S_MODE_MASK,
 			channels == 1 ? 0 : ssi_private->i2s_mode);
+
+	return 0;
+}
+
+static int fsl_ssi_hw_free(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct fsl_ssi_private *ssi_private =
+	snd_soc_dai_get_drvdata(rtd->cpu_dai);
+
+	if (ssi_private->i2s_mode == CCSR_SSI_SCR_I2S_MODE_MASTER &&
+			ssi_private->baudclk_streams & BIT(substream->stream)) {
+		clk_disable_unprepare(ssi_private->clk);
+		ssi_private->baudclk_streams &= ~BIT(substream->stream);
+	}
 
 	return 0;
 }
@@ -672,8 +724,9 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	return 0;
 }
 
-static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
-				  int clk_id, unsigned int freq, int dir)
+static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai,
+		struct snd_pcm_hw_params *hw_params)
 {
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
@@ -681,6 +734,13 @@ static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 	u32 pm = 999, div2, psr, stccr, mask, afreq, factor, i;
 	unsigned long clkrate, sysrate = 0, baudrate, flags;
 	u64 sub, savesub = 100000;
+	unsigned int freq;
+
+	/* Prefer the explicitly set bitclock frequency */
+	if (ssi_private->bitclk_freq)
+		freq = ssi_private->bitclk_freq;
+	else
+		freq = params_channels(hw_params) * 32 * params_rate(hw_params);
 
 	/*
 	 * It should be already enough to divide clock by setting pm.
@@ -737,7 +797,7 @@ static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 	mask = CCSR_SSI_SxCCR_PM_MASK | CCSR_SSI_SxCCR_DIV2_MASK
 		| CCSR_SSI_SxCCR_PSR_MASK;
 
-	if (dir == SND_SOC_CLOCK_OUT || synchronous)
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK || synchronous)
 		write_ssi_mask(&ssi->stccr, mask, stccr);
 	else
 		write_ssi_mask(&ssi->srccr, mask, stccr);
@@ -753,6 +813,16 @@ static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 		ssi_private->baudclk_locked = true;
 	}
 	spin_unlock_irqrestore(&ssi_private->baudclk_lock, flags);
+
+	return 0;
+}
+
+static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+		int clk_id, unsigned int freq, int dir)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ssi_private->bitclk_freq = freq;
 
 	return 0;
 }
@@ -807,7 +877,6 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 	}
 
 	if (ssi_private->ssi_on_imx) {
-		clk_disable_unprepare(ssi_private->clk);
 		clk_disable_unprepare(ssi_private->coreclk);
 
 		pm_runtime_put_sync(dai->dev);
@@ -829,6 +898,7 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.startup	= fsl_ssi_startup,
 	.hw_params	= fsl_ssi_hw_params,
+	.hw_free	= fsl_ssi_hw_free,
 	.set_fmt	= fsl_ssi_set_dai_fmt,
 	.set_sysclk	= fsl_ssi_set_dai_sysclk,
 	.set_tdm_slot	= fsl_ssi_set_dai_tdm_slot,
@@ -1163,10 +1233,51 @@ static int fsl_ssi_runtime_suspend(struct device *dev)
 }
 #endif
 
+#ifdef CONFIG_PM_SLEEP
+static int fsl_ssi_suspend(struct device *dev)
+{
+	struct fsl_ssi_private *ssi_private = dev_get_drvdata(dev);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	int i;
+
+	clk_prepare_enable(ssi_private->coreclk);
+
+	for (i = 0; i < NUM_OF_SSI_REG; i++) {
+		if (&ssi->stx0 + i == NULL || fsl_ssi_volatile_reg(i * 0x4))
+			continue;
+		ssi_private->regcache[i] = read_ssi(&ssi->stx0 + i);
+	}
+
+	clk_disable_unprepare(ssi_private->coreclk);
+
+	return 0;
+}
+
+static int fsl_ssi_resume(struct device *dev)
+{
+	struct fsl_ssi_private *ssi_private = dev_get_drvdata(dev);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	int i;
+
+	clk_prepare_enable(ssi_private->coreclk);
+
+	for (i = 0; i < NUM_OF_SSI_REG; i++) {
+		if (&ssi->stx0 + i == NULL || fsl_ssi_volatile_reg(i * 0x4))
+			continue;
+		write_ssi(ssi_private->regcache[i], &ssi->stx0 + i);
+	}
+
+	clk_disable_unprepare(ssi_private->coreclk);
+
+	return 0;
+}
+#endif /* CONFIG_PM_SLEEP */
+
 static const struct dev_pm_ops fsl_ssi_pm = {
 	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend,
 			fsl_ssi_runtime_resume,
 			NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
 };
 
 static const struct of_device_id fsl_ssi_ids[] = {

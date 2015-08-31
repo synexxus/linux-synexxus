@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -49,6 +49,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	FB_VMODE_NONINTERLACED,
 	0,},
 	{
+	/* sharp wvga 800x480 */
+	"sharp-wvga", 60, 800, 480, 1000000000/928 * 1000 /525/60,
+	.left_margin = 40, .right_margin = 40,
+	.upper_margin = 31, .lower_margin = 11,
+	.hsync_len = 48, .vsync_len = 3,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
 	 /* Okaya 480x272 */
 	 "okaya_480x272", 60, 480, 272, 97786,
 	 .left_margin = 2, .right_margin = 1,
@@ -57,6 +66,138 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
+	{
+		/* 1280x120 @ 60 Hz , pixel clk @ 32MHz */
+		"TRULY-1U",
+		60, /* refresh rate in Hz */
+		1280, /* xres in pixels */
+		120, /* yres in pixels */
+		45000, /* pixel clock in picoseconds (dot clock or just clock) */
+		54, /* left_margin (Horizontal Back Porch) in pixel clock units */
+		54, /* right_margin (Horizontal Front Porch) in pixel clock units */
+		3, /* upper_margin (Vertical Back Porch) in pixel clock units */
+		3, /* lower_margin (Vertical Front Porch) in pixel clock units */
+		3, /* hsync_len (Hsync pulse width) */
+		3, /* vsync_len (Vsync pulse width) */
+		0, /* sync (Polarity on the Data Enable) */
+		FB_VMODE_NONINTERLACED, /* vmode (Video Mode) */
+		0, /* flags */
+	},
+	{
+	/* 800x600 @ 60 Hz , pixel clk @ 40MHz */
+	"LSA40AT9001", 60, 800, 600, 1000000000 / (800+10+46+210) * 1000 / (600+1+23+12) / 60,
+	.left_margin = 46, .right_margin = 210,
+	.upper_margin = 23, .lower_margin = 12,
+	.hsync_len = 10, .vsync_len = 1,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	/* 480x800 @ 57 Hz , pixel clk @ 27MHz */
+	"LB043", 57, 480, 800, 25000,
+	.left_margin = 40, .right_margin = 60,
+	.upper_margin = 10, .lower_margin = 10,
+	.hsync_len = 20, .vsync_len = 10,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	/* 480x800 @ 60 Hz , pixel clk @ 27MHz */
+	"AUO_G050", 60, 480, 800, 1000000000/516 * 1000 /836/60,
+	.left_margin = 18, .right_margin = 16,
+	.upper_margin = 18, .lower_margin = 16,
+	.hsync_len = 2, .vsync_len = 2,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	 /*
+	  * hitachi 640x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "hitachi_hvga", 60, 640, 240, 1000000000 / (640+34+1+125) * 1000 / (240+8+3+9) / 60,	//80128, (12.48 MHz)
+	 .left_margin = 34, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+
+	/*
+	 * BT656/BT1120 mode
+	 *
+	 * left_margin: used for field0 vStart width in lines
+	 *
+	 * right_margin: used for field0 vEnd width in lines
+	 *
+	 * up_margin: used for field1 vStart width in lines
+	 *
+	 * down_margin: used for field1 vEnd width in lines
+	 *
+	 * hsync_len: EAV Code + Blanking Video + SAV Code (in pixel clock count)
+	 *		   For BT656 NTSC, it is 4 + 67*4 + 4 = 276.
+	 *		   For BT1120 NTSC, it is 4 + 67*2 + 4 = 142.
+	 *		   For BT656 PAL, it is 4 + 70*4 + 4 = 288.
+	 *		   For BT1120 PAL, it is 4 + 70*2 + 4 = 148.
+	 *
+	 * vsync_len: not used, set to 1
+	 */
+	{
+	 /* NTSC Interlaced output */
+	 "BT656-NTSC", 60, 720, 480, 37037,
+	 19, 3,
+	 20, 3,
+	 276, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* PAL Interlaced output */
+	 "BT656-PAL", 50, 720, 576, 37037,
+	 22, 2,
+	 23, 2,
+	 288, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* NTSC Interlaced output */
+	 "BT1120-NTSC", 30, 720, 480, 74074,
+	 19, 3,
+	 20, 3,
+	 142, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* PAL Interlaced output */
+	 "BT1120-PAL", 25, 720, 576, 74074,
+	 22, 2,
+	 23, 2,
+	 148, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* 1080I60 Interlaced output */
+	  "BT1120-1080I60", 60, 1920, 1080, 13468,
+	  20, 3,
+	  20, 2,
+	  280, 1,
+	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	  FB_VMODE_INTERLACED,
+	  FB_MODE_IS_DETAILED,},
+	{
+	  /* 1080I50 Interlaced output */
+	  "BT1120-1080I50", 50, 1920, 1080, 13468,
+	  20, 3,
+	  20, 2,
+	  720, 1,
+	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	  FB_VMODE_INTERLACED,
+	  FB_MODE_IS_DETAILED,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
@@ -65,14 +206,16 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 {
 	int ret, i;
 	struct mxc_lcdif_data *lcdif = mxc_dispdrv_getdata(disp);
-	struct mxc_lcd_platform_data *plat_data
-			= lcdif->pdev->dev.platform_data;
+	struct device *dev = &lcdif->pdev->dev;
+	struct mxc_lcd_platform_data *plat_data = dev->platform_data;
 	struct fb_videomode *modedb = lcdif_modedb;
 	int modedb_sz = lcdif_modedb_sz;
 
 	/* use platform defined ipu/di */
-	setting->dev_id = plat_data->ipu_id;
-	setting->disp_id = plat_data->disp_id;
+	ret = ipu_di_to_crtc(dev, plat_data->ipu_id,
+			     plat_data->disp_id, &setting->crtc);
+	if (ret < 0)
+		return ret;
 
 	ret = fb_find_mode(&setting->fbi->var, setting->fbi, setting->dft_mode_str,
 				modedb, modedb_sz, NULL, setting->default_bpp);
@@ -83,13 +226,8 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
 	for (i = 0; i < modedb_sz; i++) {
-		struct fb_videomode m;
-		fb_var_to_videomode(&m, &setting->fbi->var);
-		if (fb_mode_is_equal(&m, &modedb[i])) {
-			fb_add_videomode(&modedb[i],
-					&setting->fbi->modelist);
-			break;
-		}
+		fb_add_videomode(&modedb[i],
+				&setting->fbi->modelist);
 	}
 
 	return ret;
@@ -153,7 +291,11 @@ static int lcd_get_of_property(struct platform_device *pdev,
 	else if (!strncmp(default_ifmt, "YVYU16", 6))
 		plat_data->default_ifmt = IPU_PIX_FMT_YVYU;
 	else if (!strncmp(default_ifmt, "VYUY16", 6))
-				plat_data->default_ifmt = IPU_PIX_FMT_VYUY;
+		plat_data->default_ifmt = IPU_PIX_FMT_VYUY;
+	else if (!strncmp(default_ifmt, "BT656", 5))
+		plat_data->default_ifmt = IPU_PIX_FMT_BT656;
+	else if (!strncmp(default_ifmt, "BT1120", 6))
+		plat_data->default_ifmt = IPU_PIX_FMT_BT1120;
 	else {
 		dev_err(&pdev->dev, "err default_ifmt!\n");
 		return -ENOENT;

@@ -651,6 +651,8 @@ static void pmz_start_tx(struct uart_port *port)
 	} else {
 		struct circ_buf *xmit = &port->state->xmit;
 
+		if (uart_circ_empty(xmit))
+			goto out;
 		write_zsdata(uap, xmit->buf[xmit->tail]);
 		zssync(uap);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
@@ -659,6 +661,7 @@ static void pmz_start_tx(struct uart_port *port)
 		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 			uart_write_wakeup(&uap->port);
 	}
+ out:
 	pmz_debug("pmz: start_tx() done.\n");
 }
 
@@ -1872,7 +1875,6 @@ static struct platform_driver pmz_driver = {
 	.remove		= __exit_p(pmz_detach),
 	.driver		= {
 		.name		= "scc",
-		.owner		= THIS_MODULE,
 	},
 };
 
@@ -2049,6 +2051,9 @@ static int __init pmz_console_init(void)
 {
 	/* Probe ports */
 	pmz_probe();
+
+	if (pmz_ports_count == 0)
+		return -ENODEV;
 
 	/* TODO: Autoprobe console based on OF */
 	/* pmz_console.index = i; */

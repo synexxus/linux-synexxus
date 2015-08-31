@@ -298,11 +298,7 @@ static void __dma_free_remap(void *cpu_addr, size_t size)
 	vunmap(cpu_addr);
 }
 
-#if IS_ENABLED(CONFIG_VIDEO_TW68)
-#define DEFAULT_DMA_COHERENT_POOL_SIZE	SZ_32M
-#else
 #define DEFAULT_DMA_COHERENT_POOL_SIZE	SZ_256K
-#endif
 
 struct dma_pool {
 	size_t size;
@@ -1315,7 +1311,7 @@ static void *arm_iommu_alloc_attrs(struct device *dev, size_t size,
 	*handle = DMA_ERROR_CODE;
 	size = PAGE_ALIGN(size);
 
-	if (gfp & GFP_ATOMIC)
+	if (!(gfp & __GFP_WAIT))
 		return __iommu_alloc_atomic(dev, size, handle);
 
 	pages = __iommu_alloc_buffer(dev, size, gfp, attrs);

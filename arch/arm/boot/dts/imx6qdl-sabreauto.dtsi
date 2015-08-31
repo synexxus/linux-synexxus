@@ -94,7 +94,6 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
-		mode_str ="LDB-XGA";
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
@@ -127,7 +126,6 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
-		mode_str ="LDB-XGA";
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
@@ -229,7 +227,7 @@
 		model = "imx-radio-si4763";
 
 		ssi-controller = <&ssi2>;
-		fm-controller = <&si4763>;
+		fm-controller = <&si476x_codec>;
 		mux-int-port = <2>;
 		mux-ext-port = <5>;
 	};
@@ -443,7 +441,7 @@
 		compatible = "cirrus,cs42888";
 		reg = <0x048>;
 		clocks = <&codec_osc 0>;
-		clock-names = "codec_osc";
+		clock-names = "mclk";
 		VA-supply = <&reg_audio>;
 		VD-supply = <&reg_audio>;
 		VLS-supply = <&reg_audio>;
@@ -462,6 +460,10 @@
 		vd-supply = <&si4763_vd>;
 		vio1-supply = <&si4763_vio1>;
 		vio2-supply = <&si4763_vio2>;
+
+		si476x_codec: si476x-codec {
+			compatible = "si476x-codec";
+		};
 	};
 };
 
@@ -496,7 +498,10 @@
 	mma8451@1c {
 		compatible = "fsl,mma8451";
 		reg = <0x1c>;
-		position = <3>;
+		position = <7>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <31 8>;
+		interrupt-route = <1>;
 	};
 
 	mag3110@0e {
@@ -504,7 +509,7 @@
 		reg = <0x0e>;
 		position = <2>;
 		interrupt-parent = <&gpio2>;
-		interrupts = <29 2>;
+		interrupts = <29 1>;
 	};
 
 	isl29023@44 {
@@ -557,6 +562,7 @@
 				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20 0x17059
 				MX6QDL_PAD_GPIO_1__GPIO1_IO01 0x17059
 				MX6QDL_PAD_SD3_RST__GPIO7_IO08 0x80000000
+				MX6QDL_PAD_EIM_BCLK__GPIO6_IO31 0x80000000
 			>;
 		};
 	};
@@ -580,12 +586,61 @@
 };
 
 &ldb {
-	ipu_id = <1>;
-	disp_id = <0>;
-	ext_ref = <1>;
-	mode = "sep0";
-	sec_ipu_id = <1>;
-	sec_disp_id = <1>;
+	status = "okay";
+
+	lvds-channel@0 {
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <18>;
+		primary;
+		status = "okay";
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: hsd100pxn1 {
+				clock-frequency = <65000000>;
+				hactive = <1024>;
+				vactive = <768>;
+				hback-porch = <220>;
+				hfront-porch = <40>;
+				vback-porch = <21>;
+				vfront-porch = <7>;
+				hsync-len = <60>;
+				vsync-len = <10>;
+			};
+		};
+	};
+
+	lvds-channel@1 {
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <18>;
+		status = "okay";
+
+		display-timings {
+			native-mode = <&timing1>;
+			timing1: hsd100pxn1 {
+				clock-frequency = <65000000>;
+				hactive = <1024>;
+				vactive = <768>;
+				hback-porch = <220>;
+				hfront-porch = <40>;
+				vback-porch = <21>;
+				vfront-porch = <7>;
+				hsync-len = <60>;
+				vsync-len = <10>;
+			};
+		};
+	};
+};
+
+&dcic1 {
+	dcic_id = <0>;
+	dcic_mux = "dcic-hdmi";
+	status = "okay";
+};
+
+&dcic2 {
+	dcic_id = <1>;
+	dcic_mux = "dcic-lvds0";
 	status = "okay";
 };
 
@@ -623,12 +678,16 @@
 			       <&max7310_c 3 GPIO_ACTIVE_HIGH>; /* RXD and TXD */
 	fsl,uart-has-rtscts;
 	status = "okay";
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode; */
+	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
 };
 
 &gpmi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
 	status = "disabled"; /* pin conflict with uart3 */
+	nand-on-flash-bbt;
 };
 
 &uart4 {
@@ -654,7 +713,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1_1>;
 	cd-gpios = <&gpio1 1 0>;
-	wp-gpios = <&gpio5 20 0>;
 	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;

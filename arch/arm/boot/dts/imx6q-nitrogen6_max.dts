@@ -22,19 +22,15 @@
 	compatible = "fsl,imx6q-nitrogen6_max", "fsl,imx6q";
 };
 
-&mxcfb1 {
+&lvds_display {
 	status = "okay";
 };
 
-&mxcfb2 {
+&hdmi_display {
 	status = "okay";
 };
 
-&mxcfb3 {
-	status = "okay";
-};
-
-&mxcfb4 {
+&lcd_display {
 	status = "okay";
 };
 
@@ -64,9 +60,5 @@
 };
 
 &v4l2_cap_2 {
-	compatible = "fsl,imx6q-v4l2-capture";
 	ipu_id = <1>;
-	csi_id = <1>;
-	mclk_source = <0>;
-	status = "okay";
 };

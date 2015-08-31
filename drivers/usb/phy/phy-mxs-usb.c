@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright 2012-2015 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Marek Vasut <marex@denx.de>
  * on behalf of DENX Software Engineering GmbH
  *
@@ -23,6 +23,7 @@
 #include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/regulator/consumer.h>
 
 #define DRIVER_NAME "mxs_phy"
 
@@ -40,6 +41,7 @@
 
 #define BM_USBPHY_CTRL_SFTRST			BIT(31)
 #define BM_USBPHY_CTRL_CLKGATE			BIT(30)
+#define BM_USBPHY_CTRL_OTG_ID_VALUE		BIT(27)
 #define BM_USBPHY_CTRL_ENAUTOSET_USBCLKS	BIT(26)
 #define BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE	BIT(25)
 #define BM_USBPHY_CTRL_ENVBUSCHG_WKUP		BIT(23)
@@ -54,6 +56,8 @@
 
 #define BM_USBPHY_IP_FIX                       (BIT(17) | BIT(18))
 
+#define BM_USBPHY_DEBUG_ENHSTPULLDOWN		(BIT(4) | BIT(5))
+#define BM_USBPHY_DEBUG_HSTPULLDOWN		(BIT(2) | BIT(3))
 #define BM_USBPHY_DEBUG_CLKGATE			BIT(30)
 
 /* Anatop Registers */
@@ -109,6 +113,13 @@
 /* The SoCs who have anatop module */
 #define MXS_PHY_HAS_ANATOP			BIT(3)
 
+/*
+ * For SoCs, which the controller may be powered off, we
+ * need to pulldown dp/dm when the controller is powered off,
+ * in that case, the dp/dm state are stable.
+ */
+#define MXS_PHY_PULLDOWN_LINE			BIT(4)
+
 struct mxs_phy_data {
 	unsigned int flags;
 };
@@ -128,7 +139,14 @@ static const struct mxs_phy_data imx6sl_phy_data = {
 		MXS_PHY_HAS_ANATOP,
 };
 
+static const struct mxs_phy_data imx6sx_phy_data = {
+	.flags = MXS_PHY_HAS_ANATOP |
+		MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS |
+		MXS_PHY_PULLDOWN_LINE,
+};
+
 static const struct of_device_id mxs_phy_dt_ids[] = {
+	{ .compatible = "fsl,imx6sx-usbphy", .data = &imx6sx_phy_data, },
 	{ .compatible = "fsl,imx6sl-usbphy", .data = &imx6sl_phy_data, },
 	{ .compatible = "fsl,imx6q-usbphy", .data = &imx6q_phy_data, },
 	{ .compatible = "fsl,imx23-usbphy", .data = &imx23_phy_data, },
@@ -142,6 +160,7 @@ struct mxs_phy {
 	const struct mxs_phy_data *data;
 	struct regmap *regmap_anatop;
 	int port_id;
+	struct regulator *phy_3p0;
 };
 
 static inline bool is_imx6q_phy(struct mxs_phy *mxs_phy)
@@ -171,6 +190,16 @@ static int mxs_phy_hw_init(struct mxs_phy *mxs_phy)
 	ret = stmp_reset_block(base + HW_USBPHY_CTRL);
 	if (ret)
 		return ret;
+
+	if (mxs_phy->phy_3p0) {
+		ret = regulator_enable(mxs_phy->phy_3p0);
+		if (ret) {
+			dev_err(mxs_phy->phy.dev,
+				"Failed to enable 3p0 regulator, ret=%d\n",
+				ret);
+			return ret;
+		}
+	}
 
 	/* Power up the PHY */
 	writel(0, base + HW_USBPHY_PWD);
@@ -223,7 +252,7 @@ static void __mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool disconnect)
 
 	if (disconnect)
 		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
-			base + HW_USBPHY_DEBUG_CLR);
+			base + HW_USBPHY_DEBUG_SET);
 
 	if (mxs_phy->port_id == 0) {
 		reg = disconnect ? ANADIG_USB1_LOOPBACK_SET
@@ -241,11 +270,23 @@ static void __mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool disconnect)
 
 	if (!disconnect)
 		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
-			base + HW_USBPHY_DEBUG_SET);
+			base + HW_USBPHY_DEBUG_CLR);
 
 	/* Delay some time, and let Linestate be SE0 for controller */
 	if (disconnect)
 		usleep_range(500, 1000);
+}
+
+static bool mxs_phy_is_otg_host(struct mxs_phy *mxs_phy)
+{
+	void __iomem *base = mxs_phy->phy.io_priv;
+	u32 phyctrl = readl(base + HW_USBPHY_CTRL);
+
+	if (IS_ENABLED(CONFIG_USB_OTG) &&
+			!(phyctrl & BM_USBPHY_CTRL_OTG_ID_VALUE))
+		return true;
+
+	return false;
 }
 
 static void mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool on)
@@ -262,7 +303,7 @@ static void mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool on)
 
 	vbus_is_on = mxs_phy_get_vbus_status(mxs_phy);
 
-	if (on && !vbus_is_on)
+	if (on && !vbus_is_on && !mxs_phy_is_otg_host(mxs_phy))
 		__mxs_phy_disconnect_line(mxs_phy, true);
 	else
 		__mxs_phy_disconnect_line(mxs_phy, false);
@@ -297,9 +338,22 @@ static int mxs_phy_init(struct usb_phy *phy)
 static void mxs_phy_shutdown(struct usb_phy *phy)
 {
 	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+	u32 value = BM_USBPHY_CTRL_ENVBUSCHG_WKUP |
+			BM_USBPHY_CTRL_ENDPDMCHG_WKUP |
+			BM_USBPHY_CTRL_ENIDCHG_WKUP |
+			BM_USBPHY_CTRL_ENAUTOSET_USBCLKS |
+			BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE |
+			BM_USBPHY_CTRL_ENAUTOCLR_PHY_PWD |
+			BM_USBPHY_CTRL_ENAUTOCLR_CLKGATE |
+			BM_USBPHY_CTRL_ENAUTO_PWRON_PLL;
 
+	writel(value, phy->io_priv + HW_USBPHY_CTRL_CLR);
+	writel(0xffffffff, phy->io_priv + HW_USBPHY_PWD);
 	writel(BM_USBPHY_CTRL_CLKGATE,
 	       phy->io_priv + HW_USBPHY_CTRL_SET);
+
+	if (mxs_phy->phy_3p0)
+		regulator_disable(mxs_phy->phy_3p0);
 
 	clk_disable_unprepare(mxs_phy->clk);
 }
@@ -403,7 +457,9 @@ static int mxs_phy_on_disconnect(struct usb_phy *phy,
 	dev_dbg(phy->dev, "%s device has disconnected\n",
 		(speed == USB_SPEED_HIGH) ? "HS" : "FS/LS");
 
-	if (speed == USB_SPEED_HIGH)
+	/* Sometimes, the speed is not high speed when the error occurs */
+	if (readl(phy->io_priv + HW_USBPHY_CTRL) &
+			BM_USBPHY_CTRL_ENHOSTDISCONDETECT)
 		writel(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
 		       phy->io_priv + HW_USBPHY_CTRL_CLR);
 
@@ -448,6 +504,18 @@ static int mxs_phy_on_resume(struct usb_phy *phy,
 		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
 				phy->io_priv + HW_USBPHY_CTRL_SET);
 	}
+
+	return 0;
+}
+
+static int mxs_phy_pulldown_line(struct usb_phy *x, bool pull_down)
+{
+	u32 bits = BM_USBPHY_DEBUG_HSTPULLDOWN | BM_USBPHY_DEBUG_ENHSTPULLDOWN;
+
+	if (pull_down)
+		writel_relaxed(bits, x->io_priv + HW_USBPHY_DEBUG_SET);
+	else
+		writel_relaxed(bits, x->io_priv + HW_USBPHY_DEBUG_CLR);
 
 	return 0;
 }
@@ -508,6 +576,23 @@ static int mxs_phy_probe(struct platform_device *pdev)
 		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend;
 		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
 	}
+
+	if (mxs_phy->data->flags & MXS_PHY_PULLDOWN_LINE)
+		mxs_phy->phy.pulldown_line = mxs_phy_pulldown_line;
+
+	mxs_phy->phy_3p0 = devm_regulator_get(&pdev->dev, "phy-3p0");
+	if (PTR_ERR(mxs_phy->phy_3p0) == -EPROBE_DEFER) {
+		return -EPROBE_DEFER;
+	} else if (PTR_ERR(mxs_phy->phy_3p0) == -ENODEV) {
+		/* not exist */
+		mxs_phy->phy_3p0 = NULL;
+	} else if (IS_ERR(mxs_phy->phy_3p0)) {
+		dev_err(&pdev->dev, "Getting regulator error: %ld\n",
+			PTR_ERR(mxs_phy->phy_3p0));
+		return PTR_ERR(mxs_phy->phy_3p0);
+	}
+	if (mxs_phy->phy_3p0)
+		regulator_set_voltage(mxs_phy->phy_3p0, 3200000, 3200000);
 
 	platform_set_drvdata(pdev, mxs_phy);
 

@@ -86,6 +86,11 @@ static struct pxp_data_format pxp_s0_formats[] = {
 		.bpp = 2,
 		.fourcc = V4L2_PIX_FMT_UYVY,
 		.colorspace = V4L2_COLORSPACE_JPEG,
+	}, {
+		.name = "Y444",
+		.bpp = 4,
+		.fourcc = V4L2_PIX_FMT_YUV444,
+		.colorspace = V4L2_COLORSPACE_JPEG,
 	},
 };
 
@@ -107,6 +112,8 @@ static unsigned int v4l2_fmt_to_pxp_fmt(u32 v4l2_pix_fmt)
 		pxp_fmt = PXP_PIX_FMT_YUV422P;
 	else if (v4l2_pix_fmt == V4L2_PIX_FMT_UYVY)
 		pxp_fmt = PXP_PIX_FMT_UYVY;
+	else if (v4l2_pix_fmt == V4L2_PIX_FMT_YUV444)
+		pxp_fmt = PXP_PIX_FMT_YUV444;
 
 	return pxp_fmt;
 }
@@ -265,7 +272,7 @@ static int _get_fbinfo(struct fb_info **fbi)
 	int i;
 	for (i = 0; i < num_registered_fb; i++) {
 		char *idstr = registered_fb[i]->fix.id;
-		if (strcmp(idstr, "mxs") == 0) {
+		if (strncmp(idstr, "mxs", 3) == 0) {
 			*fbi = registered_fb[i];
 			return 0;
 		}
@@ -436,7 +443,8 @@ static int pxp_s_output(struct file *file, void *fh,
 		return -EINVAL;
 
 	/* Output buffer is same format as fbdev */
-	if (fmt->pixelformat == V4L2_PIX_FMT_RGB24)
+	if (fmt->pixelformat == V4L2_PIX_FMT_RGB24  ||
+		fmt->pixelformat == V4L2_PIX_FMT_YUV444)
 		bpp = 4;
 	else
 		bpp = 2;
@@ -450,6 +458,7 @@ static int pxp_s_output(struct file *file, void *fh,
 		if (ret < 0)
 			return ret;
 	}
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
 
 	pxp->pxp_conf.out_param.width = fmt->width;
 	pxp->pxp_conf.out_param.height = fmt->height;
@@ -643,9 +652,17 @@ static int pxp_reqbufs(struct file *file, void *priv,
 static int pxp_querybuf(struct file *file, void *priv,
 			struct v4l2_buffer *b)
 {
+	int ret;
 	struct pxps *pxp = video_get_drvdata(video_devdata(file));
 
-	return videobuf_querybuf(&pxp->s0_vbq, b);
+	ret = videobuf_querybuf(&pxp->s0_vbq, b);
+	if (!ret) {
+		struct videobuf_buffer *vb = pxp->s0_vbq.bufs[b->index];
+		if (b->flags & V4L2_BUF_FLAG_MAPPED)
+			b->m.offset = videobuf_to_dma_contig(vb);
+	}
+
+	return ret;
 }
 
 static int pxp_qbuf(struct file *file, void *priv,
@@ -673,6 +690,13 @@ static int pxp_streamon(struct file *file, void *priv,
 	if (t != V4L2_BUF_TYPE_VIDEO_OUTPUT)
 		return -EINVAL;
 
+	if (pxp->streaming) {
+		dev_err(&pxp->pdev->dev, "v4l2 output already run!");
+		return -EBUSY;
+	}
+
+	pxp->streaming = true;
+
 	_get_cur_fb_blank(pxp);
 	set_fb_blank(FB_BLANK_UNBLANK);
 
@@ -693,12 +717,16 @@ static int pxp_streamoff(struct file *file, void *priv,
 	if ((t != V4L2_BUF_TYPE_VIDEO_OUTPUT))
 		return -EINVAL;
 
-	ret = videobuf_streamoff(&pxp->s0_vbq);
+	if (pxp->streaming) {
+		ret = videobuf_streamoff(&pxp->s0_vbq);
 
-	pxp_show_buf(pxp, (unsigned long)pxp->fb.base);
+		pxp_show_buf(pxp, (unsigned long)pxp->fb.base);
 
-	if (pxp->fb_blank)
-		set_fb_blank(FB_BLANK_POWERDOWN);
+		if (pxp->fb_blank)
+			set_fb_blank(FB_BLANK_POWERDOWN);
+
+		pxp->streaming = false;
+	}
 
 	return ret;
 }
@@ -803,17 +831,14 @@ static int pxp_buf_prepare(struct videobuf_queue *q,
 					&pxp_conf->s0_param,
 					sizeof(struct pxp_layer_param));
 			} else if (i == 1) { /* Output */
-				if (proc_data->rotate % 180) {
-					pxp_conf->out_param.width =
-						pxp->fb.fmt.height;
-					pxp_conf->out_param.height =
-						pxp->fb.fmt.width;
-				} else {
-					pxp_conf->out_param.width =
-						pxp->fb.fmt.width;
-					pxp_conf->out_param.height =
-						pxp->fb.fmt.height;
-				}
+				/* we should always pass the output
+				 * width and height which is the value
+				 * after been rotated.
+				 */
+				pxp_conf->out_param.width =
+					pxp->fb.fmt.width;
+				pxp_conf->out_param.height =
+					pxp->fb.fmt.height;
 
 				pxp_conf->out_param.paddr = pxp->outbuf.paddr;
 				memcpy(&desc->layer_param.out_param,
@@ -1028,6 +1053,8 @@ static int pxp_s_crop(struct file *file, void *fh,
 	pxp->pxp_conf.proc_data.drect.width = w;
 	pxp->pxp_conf.proc_data.drect.height = h;
 
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
+
 	return 0;
 }
 
@@ -1072,6 +1099,8 @@ static int pxp_s_ctrl(struct file *file, void *priv,
 				return -ERANGE;
 			return pxp_set_cstate(pxp, vc);
 		}
+
+	memset(pxp->outbuf.vaddr, 0x0, pxp->outbuf.size);
 
 	return -EINVAL;
 }
@@ -1126,8 +1155,9 @@ out:
 static int pxp_close(struct file *file)
 {
 	struct pxps *pxp = video_get_drvdata(video_devdata(file));
+	if (pxp->streaming)
+		pxp_streamoff(file, NULL, V4L2_BUF_TYPE_VIDEO_OUTPUT);
 
-	pxp_streamoff(file, NULL, V4L2_BUF_TYPE_VIDEO_OUTPUT);
 	videobuf_stop(&pxp->s0_vbq);
 	videobuf_mmap_free(&pxp->s0_vbq);
 	pxp->active = NULL;

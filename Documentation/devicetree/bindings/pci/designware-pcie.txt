@@ -6,6 +6,10 @@ Required properties:
 	as "samsung,exynos5440-pcie" or "fsl,imx6q-pcie".
 - reg: base addresses and lengths of the pcie controller,
 	the phy controller, additional register for the phy controller.
+        Should contain the configuration address space.
+- reg-names: Must be "config" for the PCIe configuration space.
+    (The old way of getting the configuration address space from "ranges"
+    is deprecated and should be avoided.)
 - interrupts: interrupt values for level interrupt,
 	pulse interrupt, special interrupt.
 - clocks: from common clock binding: handle to pci clock.
@@ -20,6 +24,9 @@ Required properties:
 	numbers.
 - num-lanes: number of lanes to use
 - reset-gpio: gpio pin number of power good signal
+- bus-range: PCI bus numbers covered (it is recommended for new devicetrees to
+  specify this property, to keep backwards compatibility a range of 0x00-0xff
+  is assumed if not present)
 
 Optional properties for fsl,imx6q-pcie
 - power-on-gpio: gpio pin number of power-enable signal

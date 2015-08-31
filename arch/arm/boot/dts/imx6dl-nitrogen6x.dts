@@ -22,11 +22,15 @@
 	compatible = "fsl,imx6dl-nitrogen6x", "fsl,imx6dl";
 };
 
-&mxcfb1 {
+&lvds_display {
 	status = "okay";
 };
 
-&mxcfb2 {
+&hdmi_display {
+	status = "okay";
+};
+
+&lcd_display {
 	status = "okay";
 };
 
@@ -49,4 +53,8 @@
 		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
 		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
 	>;
+};
+
+&pxp {
+	status = "okay";
 };

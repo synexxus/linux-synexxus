@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -27,8 +27,6 @@
 #include <linux/clk.h>
 #include <linux/of_device.h>
 #include <linux/i2c.h>
-#include <linux/mfd/syscon.h>
-#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/proc_fs.h>
@@ -73,6 +71,11 @@ enum ov5640_mode {
 enum ov5640_frame_rate {
 	ov5640_15_fps,
 	ov5640_30_fps
+};
+
+static int ov5640_framerates[] = {
+	[ov5640_15_fps] = 15,
+	[ov5640_30_fps] = 30,
 };
 
 /* image size under 1280 * 960 are SUBSAMPLING
@@ -2677,7 +2680,8 @@ static int trigger_auto_focus(void){
 
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
-	int retval1,retval2;
+	int retval1;
+	u8 regval;
 	u8 loca_val=0;
 
 	switch (vc->id) {
@@ -2686,18 +2690,16 @@ static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_comman
 			if(vc->value0 < 0 || vc->value0 > 255)
 				return ret;
 			loca_val = vc->value0;
-			ov5640_write_reg(CMD_PARA3, 0);
-			ov5640_write_reg(CMD_PARA4, loca_val);
-			retval1=ov5640_write_reg(CMD_ACK, 0x01);
-			retval2=ov5640_write_reg(CMD_MAIN, 0x1a);
-			if(retval1 != 0 || retval2 != 0) {
-				pr_err("%s:error stepping to 0x%02x: %d/%d\n",
-				       __func__, vc->value0, retval1,retval2);
-				ret = -1;
-			} else {
-				pr_debug("step successful\n");
-				ret = 0;
+			retval1 = ov5640_read_reg(0x3602,&regval);
+			if (0 > retval1) {
+				pr_err("ov5640_read_reg(3602): %d\n", retval1);
+				return retval1;
 			}
+			regval &= 0x0f;
+			regval |= (loca_val&7) << 5; 	/* low 3 bits */
+			ov5640_write_reg(0x3602, regval);
+			ov5640_write_reg(0x3603, loca_val >> 3);
+			ret = 0;
 			break;
 		default:
 			pr_err("%s:Unknown ctrl 0x%x\n", __func__, vc->id);
@@ -3053,7 +3055,26 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	struct sensor_data *sensor = s->priv;
 
-	f->fmt.pix = sensor->pix;
+	switch (f->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		f->fmt.pix = sensor->pix;
+		pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+		break;
+
+	case V4L2_BUF_TYPE_SENSOR:
+		pr_debug("%s: left=%d, top=%d, %dx%d\n", __func__,
+			sensor->spix.left, sensor->spix.top,
+			sensor->spix.swidth, sensor->spix.sheight);
+		f->fmt.spix = sensor->spix;
+		break;
+
+	case V4L2_BUF_TYPE_PRIVATE:
+		break;
+
+	default:
+		f->fmt.pix = sensor->pix;
+		break;
+	}
 
 	return 0;
 }
@@ -3178,6 +3199,37 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 			max(ov5640_mode_info_data[0][fsize->index].height,
 			    ov5640_mode_info_data[1][fsize->index].height);
 	return 0;
+}
+
+/*!
+ * ioctl_enum_frameintervals - V4L2 sensor interface handler for
+ *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
+ * @s: pointer to standard V4L2 device structure
+ * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
+ *
+ * Return 0 if successful, otherwise -EINVAL.
+ */
+static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
+					 struct v4l2_frmivalenum *fival)
+{
+	int i, j, count = 0;
+
+	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+	fival->discrete.numerator = 1;
+
+	for (i = 0; i < ARRAY_SIZE(ov5640_mode_info_data); i++)
+		for (j = 0; j < (ov5640_mode_MAX + 1); j++)
+			if (fival->pixel_format == ov5640_data.pix.pixelformat
+			 && fival->width == ov5640_mode_info_data[i][j].width
+			 && fival->height == ov5640_mode_info_data[i][j].height
+			 && ov5640_mode_info_data[i][j].init_data_ptr != NULL
+			 && fival->index == count++) {
+				fival->discrete.denominator =
+						ov5640_framerates[i];
+				return 0;
+			}
+
+	return -EINVAL;
 }
 
 /*!
@@ -3324,6 +3376,8 @@ static struct v4l2_int_ioctl_desc ov5640_ioctl_desc[] = {
 	{vidioc_int_s_ctrl_num, (v4l2_int_ioctl_func *) ioctl_s_ctrl},
 	{vidioc_int_enum_framesizes_num,
 				(v4l2_int_ioctl_func *) ioctl_enum_framesizes},
+	{vidioc_int_enum_frameintervals_num,
+			(v4l2_int_ioctl_func *) ioctl_enum_frameintervals},
 	{vidioc_int_g_chip_ident_num,
 				(v4l2_int_ioctl_func *) ioctl_g_chip_ident},
 	{vidioc_int_send_command_num,
@@ -3344,6 +3398,38 @@ static struct v4l2_int_device ov5640_int_device = {
 	},
 };
 
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	u8 val;
+	s32 rval = ov5640_read_reg(ov5640_data.last_reg, &val);
+
+	return sprintf(buf, "ov5640[0x%04x]=0x%02x\n",ov5640_data.last_reg, rval);
+}
+static ssize_t set_reg(struct device *dev,
+			struct device_attribute *attr,
+		       const char *buf, size_t count)
+{
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%04x=%02x", &regnum, &value);
+	if (1 <= num_parsed) {
+		if (0xffff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		ov5640_data.last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		if (0xff < (unsigned)value) {
+			pr_err("%s:invalid value %x\n", __func__, value);
+			return 0;
+		}
+		ov5640_write_reg(ov5640_data.last_reg, value);
+	}
+	return count;
+}
+static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUGO, show_reg, set_reg);
+
 /*!
  * ov5640 I2C probe function
  *
@@ -3357,7 +3443,6 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
-	struct regmap *gpr;
 	struct sensor_data *sensor = &ov5640_data;
 
 	/* request power down pin */
@@ -3465,24 +3550,6 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		if (of_machine_is_compatible("fsl,imx6q")) {
-			if (sensor->csi == sensor->ipu_id) {
-				int mask = sensor->csi ? (1 << 20) : (1 << 19);
-
-				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
-			}
-		} else if (of_machine_is_compatible("fsl,imx6dl")) {
-			int mask = sensor->csi ? (7 << 3) : (7 << 0);
-			int val =  sensor->csi ? (3 << 3) : (0 << 0);
-
-			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
-		}
-	} else {
-		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
-		       __func__);
-	}
 	sensor->virtual_channel = sensor->csi | (sensor->ipu_id << 1);
 	ov5640_standby(1);
 
@@ -3491,6 +3558,8 @@ static int ov5640_probe(struct i2c_client *client,
 
 //	clk_disable_unprepare(ov5640_data.sensor_clk);
 
+	if (device_create_file(dev, &dev_attr_ov5640_reg))
+		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
 	pr_info("camera ov5640_mipi is found\n");
 	return retval;
 }

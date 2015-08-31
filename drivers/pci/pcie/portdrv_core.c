@@ -46,7 +46,7 @@ static void release_pcie_device(struct device *dev)
  * pcie_port_msix_add_entry - add entry to given array of MSI-X entries
  * @entries: Array of MSI-X entries
  * @new_entry: Index of the entry to add to the array
- * @nr_entries: Number of entries aleady in the array
+ * @nr_entries: Number of entries already in the array
  *
  * Return value: Position of the added entry in the array
  */
@@ -79,9 +79,10 @@ static int pcie_port_enable_msix(struct pci_dev *dev, int *vectors, int mask)
 	u16 reg16;
 	u32 reg32;
 
-	nr_entries = pci_msix_table_size(dev);
-	if (!nr_entries)
-		return -EINVAL;
+	nr_entries = pci_msix_vec_count(dev);
+	if (nr_entries < 0)
+		return nr_entries;
+	BUG_ON(!nr_entries);
 	if (nr_entries > PCIE_PORT_MAX_MSIX_ENTRIES)
 		nr_entries = PCIE_PORT_MAX_MSIX_ENTRIES;
 
@@ -260,13 +261,14 @@ static int get_port_device_capability(struct pci_dev *dev)
 	if (pcie_ports_disabled)
 		return 0;
 
-	err = pcie_port_platform_notify(dev, &cap_mask);
-	if (!pcie_ports_auto) {
-		cap_mask = PCIE_PORT_SERVICE_PME | PCIE_PORT_SERVICE_HP
-				| PCIE_PORT_SERVICE_VC;
-		if (pci_aer_available())
-			cap_mask |= PCIE_PORT_SERVICE_AER;
-	} else if (err) {
+	cap_mask = PCIE_PORT_SERVICE_PME | PCIE_PORT_SERVICE_HP
+			| PCIE_PORT_SERVICE_VC;
+	if (pci_aer_available())
+		cap_mask |= PCIE_PORT_SERVICE_AER;
+
+	if (pcie_ports_auto) {
+		err = pcie_port_platform_notify(dev, &cap_mask);
+		if (err)
 			return 0;
 	}
 

@@ -38,6 +38,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
@@ -66,7 +67,7 @@
 #define FLEXCAN_MCR_BCC			BIT(16)
 #define FLEXCAN_MCR_LPRIO_EN		BIT(13)
 #define FLEXCAN_MCR_AEN			BIT(12)
-#define FLEXCAN_MCR_MAXMB(x)		((x) & 0xf)
+#define FLEXCAN_MCR_MAXMB(x)		((x) & 0x1f)
 #define FLEXCAN_MCR_IDAM_A		(0 << 8)
 #define FLEXCAN_MCR_IDAM_B		(1 << 8)
 #define FLEXCAN_MCR_IDAM_C		(2 << 8)
@@ -205,6 +206,13 @@ struct flexcan_devtype_data {
 	u32 features;	/* hardware controller features */
 };
 
+struct flexcan_stop_mode {
+	struct regmap *gpr;
+	u8 req_gpr;
+	u8 req_bit;
+	u8 ack_gpr;
+	u8 ack_bit;
+};
 struct flexcan_priv {
 	struct can_priv can;
 	struct net_device *dev;
@@ -218,7 +226,9 @@ struct flexcan_priv {
 	struct clk *clk_per;
 	struct flexcan_platform_data *pdata;
 	const struct flexcan_devtype_data *devtype_data;
-	struct regmap *gpr;
+	struct flexcan_stop_mode stm;
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 	int id;
 };
 
@@ -269,28 +279,18 @@ static inline void flexcan_write(u32 val, void __iomem *addr)
 
 static inline void flexcan_enter_stop_mode(struct flexcan_priv *priv)
 {
-	int val;
-
 	/* enable stop request */
-	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES) {
-		val = priv->id ? IMX6Q_GPR13_CAN2_STOP_REQ :
-				IMX6Q_GPR13_CAN1_STOP_REQ;
-		regmap_update_bits(priv->gpr, IOMUXC_GPR13,
-			val, val);
-	}
+	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES)
+		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
+			1 << priv->stm.req_bit, 1 << priv->stm.req_bit);
 }
 
 static inline void flexcan_exit_stop_mode(struct flexcan_priv *priv)
 {
-	int val;
-
 	/* remove stop request */
-	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES) {
-		val = priv->id ? IMX6Q_GPR13_CAN2_STOP_REQ :
-				IMX6Q_GPR13_CAN1_STOP_REQ;
-		regmap_update_bits(priv->gpr, IOMUXC_GPR13,
-			val, 0);
-	}
+	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES)
+		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
+			1 << priv->stm.req_bit, 0);
 }
 
 /*
@@ -300,6 +300,11 @@ static void flexcan_transceiver_switch(const struct flexcan_priv *priv, int on)
 {
 	if (priv->pdata && priv->pdata->transceiver_switch)
 		priv->pdata->transceiver_switch(on);
+	else if (gpio_is_valid(priv->stby_gpio)) {
+		if (priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW)
+			on = !on ;
+		gpio_set_value(priv->stby_gpio, on);
+	}
 }
 
 static inline int flexcan_has_and_handle_berr(const struct flexcan_priv *priv,
@@ -753,7 +758,6 @@ static int flexcan_chip_start(struct net_device *dev)
 {
 	struct flexcan_priv *priv = netdev_priv(dev);
 	struct flexcan_regs __iomem *regs = priv->base;
-	unsigned int i;
 	int err;
 	u32 reg_mcr, reg_ctrl;
 
@@ -787,10 +791,12 @@ static int flexcan_chip_start(struct net_device *dev)
 	 * enable self wakeup
 	 */
 	reg_mcr = flexcan_read(&regs->mcr);
+	reg_mcr &= ~FLEXCAN_MCR_MAXMB(0xff);
 	reg_mcr |= FLEXCAN_MCR_FRZ | FLEXCAN_MCR_FEN | FLEXCAN_MCR_HALT |
 		FLEXCAN_MCR_SUPV | FLEXCAN_MCR_WRN_EN |
 		FLEXCAN_MCR_IDAM_C | FLEXCAN_MCR_SRX_DIS |
-		FLEXCAN_MCR_WAK_MSK | FLEXCAN_MCR_SLF_WAK;
+		FLEXCAN_MCR_WAK_MSK | FLEXCAN_MCR_SLF_WAK |
+		FLEXCAN_MCR_MAXMB(FLEXCAN_TX_BUF_ID);
 	netdev_dbg(dev, "%s: writing mcr=0x%08x", __func__, reg_mcr);
 	flexcan_write(reg_mcr, &regs->mcr);
 
@@ -824,16 +830,9 @@ static int flexcan_chip_start(struct net_device *dev)
 	netdev_dbg(dev, "%s: writing ctrl=0x%08x", __func__, reg_ctrl);
 	flexcan_write(reg_ctrl, &regs->ctrl);
 
-	for (i = 0; i < ARRAY_SIZE(regs->cantxfg); i++) {
-		flexcan_write(0, &regs->cantxfg[i].can_ctrl);
-		flexcan_write(0, &regs->cantxfg[i].can_id);
-		flexcan_write(0, &regs->cantxfg[i].data[0]);
-		flexcan_write(0, &regs->cantxfg[i].data[1]);
-
-		/* put MB into rx queue */
-		flexcan_write(FLEXCAN_MB_CNT_CODE(0x4),
-			&regs->cantxfg[i].can_ctrl);
-	}
+	/* Abort any pending TX, mark Mailbox as INACTIVE */
+	flexcan_write(FLEXCAN_MB_CNT_CODE(0x4),
+		      &regs->cantxfg[FLEXCAN_TX_BUF_ID].can_ctrl);
 
 	/* acceptance mask/acceptance code (accept everything) */
 	flexcan_write(0x0, &regs->rxgmask);
@@ -911,7 +910,7 @@ static int flexcan_open(struct net_device *dev)
 	/* start chip and queuing */
 	err = flexcan_chip_start(dev);
 	if (err)
-		goto out_close;
+		goto out_free_irq;
 
 	can_led_event(dev, CAN_LED_EVENT_OPEN);
 
@@ -920,6 +919,8 @@ static int flexcan_open(struct net_device *dev)
 
 	return 0;
 
+ out_free_irq:
+	free_irq(dev->irq, dev);
  out_close:
 	close_candev(dev);
  out:
@@ -1025,10 +1026,60 @@ static void unregister_flexcandev(struct net_device *dev)
 	unregister_candev(dev);
 }
 
+static int flexcan_of_parse_stop_mode(struct platform_device *pdev)
+{
+	struct net_device *dev = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
+	struct device_node *node;
+	struct flexcan_priv *priv;
+	phandle phandle;
+	u32 out_val[5];
+	int ret;
+
+	if (!np)
+		return -EINVAL;
+	/*
+	 * stop mode property format is:
+	 * <&gpr req_gpr req_bit ack_gpr ack_bit>.
+	 */
+	ret = of_property_read_u32_array(np, "stop-mode", out_val, 5);
+	if (ret) {
+		dev_dbg(&pdev->dev, "no stop-mode property\n");
+		return ret;
+	}
+	phandle = *out_val;
+
+	node = of_find_node_by_phandle(phandle);
+	if (!node) {
+		dev_dbg(&pdev->dev, "could not find gpr node by phandle\n");
+		return PTR_ERR(node);
+	}
+
+	priv = netdev_priv(dev);
+	priv->stm.gpr = syscon_node_to_regmap(node);
+	if (IS_ERR(priv->stm.gpr)) {
+		dev_dbg(&pdev->dev, "could not find gpr regmap\n");
+		return PTR_ERR(priv->stm.gpr);
+	}
+
+	of_node_put(node);
+
+	priv->stm.req_gpr = out_val[1];
+	priv->stm.req_bit = out_val[2];
+	priv->stm.ack_gpr = out_val[3];
+	priv->stm.ack_bit = out_val[4];
+
+	dev_dbg(&pdev->dev, "gpr %s req_gpr 0x%x req_bit %u ack_gpr 0x%x ack_bit %u\n",
+			node->full_name, priv->stm.req_gpr,
+			priv->stm.req_bit, priv->stm.ack_gpr,
+			priv->stm.ack_bit);
+	return 0;
+}
+
 static const struct of_device_id flexcan_of_match[] = {
-	{ .compatible = "fsl,p1010-flexcan", .data = &fsl_p1010_devtype_data, },
-	{ .compatible = "fsl,imx28-flexcan", .data = &fsl_imx28_devtype_data, },
 	{ .compatible = "fsl,imx6q-flexcan", .data = &fsl_imx6q_devtype_data, },
+	{ .compatible = "fsl,imx28-flexcan", .data = &fsl_imx28_devtype_data, },
+	{ .compatible = "fsl,p1010-flexcan", .data = &fsl_p1010_devtype_data, },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, flexcan_of_match);
@@ -1135,6 +1186,14 @@ static int flexcan_probe(struct platform_device *pdev)
 	priv->pdata = pdev->dev.platform_data;
 	priv->devtype_data = devtype_data;
 
+	priv->stby_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+						  "trx-stby-gpio", 0,
+						  &priv->stby_gpio_flags);
+	if (gpio_is_valid(priv->stby_gpio)){
+		gpio_request_one(priv->stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby");
+		gpio_direction_output(priv->stby_gpio,1);
+	}
+
 	netif_napi_add(dev, &priv->napi, flexcan_poll, FLEXCAN_NAPI_WEIGHT);
 
 	dev_set_drvdata(&pdev->dev, dev);
@@ -1149,17 +1208,10 @@ static int flexcan_probe(struct platform_device *pdev)
 	devm_can_led_init(dev);
 
 	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES) {
-		priv->gpr = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
-				"gpr");
-		if (IS_ERR(priv->gpr)) {
+		err = flexcan_of_parse_stop_mode(pdev);
+		if (err) {
 			wakeup = 0;
-			dev_dbg(&pdev->dev, "can not get grp\n");
-		}
-
-		priv->id = of_alias_get_id(pdev->dev.of_node, "flexcan");
-		if (priv->id < 0) {
-			wakeup = 0;
-			dev_dbg(&pdev->dev, "can not get alias id\n");
+			dev_dbg(&pdev->dev, "failed to parse stop-mode\n");
 		}
 	}
 
@@ -1191,6 +1243,9 @@ static int flexcan_remove(struct platform_device *pdev)
 	unregister_flexcandev(dev);
 	platform_set_drvdata(pdev, NULL);
 	iounmap(priv->base);
+
+	if (gpio_is_valid(priv->stby_gpio))
+		gpio_free(priv->stby_gpio);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	release_mem_region(mem->start, resource_size(mem));

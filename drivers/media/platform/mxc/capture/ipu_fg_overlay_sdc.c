@@ -424,7 +424,6 @@ static int foreground_stop(void *private)
 		return 0;
 
 	err = ipu_channel_disable(cam->ipu_chan, true);
-
 	ipu_channel_free(&cam->ipu_chan);
 
 	csi_buffer_num = 0;

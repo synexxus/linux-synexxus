@@ -10,7 +10,8 @@ obj-$(CONFIG_SND_SOC_P1022_DS) += snd-soc-p1022-ds.o
 snd-soc-p1022-rdk-objs := p1022_rdk.o
 obj-$(CONFIG_SND_SOC_P1022_RDK) += snd-soc-p1022-rdk.o
 
-# Freescale PowerPC SSI/DMA/ASRC/ESAI Platform Support
+# Freescale SSI/DMA/SAI/SPDIF/ASRC/ESAI Support
+snd-soc-fsl-sai-objs := fsl_sai.o
 snd-soc-fsl-ssi-objs := fsl_ssi.o
 snd-soc-fsl-asrc-pcm-objs := fsl_asrc_pcm.o
 snd-soc-fsl-asrc-objs := fsl_asrc.o
@@ -19,6 +20,7 @@ snd-soc-fsl-spdif-objs := fsl_spdif.o
 snd-soc-fsl-hdmi-objs := fsl_hdmi.o
 snd-soc-fsl-utils-objs := fsl_utils.o
 snd-soc-fsl-dma-objs := fsl_dma.o
+obj-$(CONFIG_SND_SOC_FSL_SAI) += snd-soc-fsl-sai.o
 obj-$(CONFIG_SND_SOC_FSL_SSI) += snd-soc-fsl-ssi.o
 obj-$(CONFIG_SND_SOC_FSL_ASRC) += snd-soc-fsl-asrc-pcm.o
 obj-$(CONFIG_SND_SOC_FSL_ASRC) += snd-soc-fsl-asrc.o
@@ -54,11 +56,13 @@ snd-soc-mx27vis-aic32x4-objs := mx27vis-aic32x4.o
 snd-soc-wm1133-ev1-objs := wm1133-ev1.o
 snd-soc-imx-cs42888-objs := imx-cs42888.o
 snd-soc-imx-sgtl5000-objs := imx-sgtl5000.o
+snd-soc-imx-wm5102-objs := imx-wm5102.o
 snd-soc-imx-wm8962-objs := imx-wm8962.o
 snd-soc-imx-spdif-objs := imx-spdif.o
 snd-soc-imx-mc13783-objs := imx-mc13783.o
 snd-soc-imx-hdmi-objs := imx-hdmi.o
 snd-soc-imx-si476x-objs := imx-si476x.o
+snd-soc-imx-mqs-objs := imx-mqs.o
 
 obj-$(CONFIG_SND_SOC_EUKREA_TLV320) += snd-soc-eukrea-tlv320.o
 obj-$(CONFIG_SND_SOC_PHYCORE_AC97) += snd-soc-phycore-ac97.o
@@ -66,10 +70,12 @@ obj-$(CONFIG_SND_SOC_MX27VIS_AIC32X4) += snd-soc-mx27vis-aic32x4.o
 obj-$(CONFIG_SND_MXC_SOC_WM1133_EV1) += snd-soc-wm1133-ev1.o
 obj-$(CONFIG_SND_SOC_IMX_CS42888) += snd-soc-imx-cs42888.o
 obj-$(CONFIG_SND_SOC_IMX_SGTL5000) += snd-soc-imx-sgtl5000.o
+obj-$(CONFIG_SND_SOC_IMX_WM5102) += snd-soc-imx-wm5102.o
 obj-$(CONFIG_SND_SOC_IMX_WM8962) += snd-soc-imx-wm8962.o
 obj-$(CONFIG_SND_SOC_IMX_SPDIF) += snd-soc-imx-spdif.o
 obj-$(CONFIG_SND_SOC_IMX_MC13783) += snd-soc-imx-mc13783.o
 obj-$(CONFIG_SND_SOC_IMX_HDMI) += snd-soc-imx-hdmi.o
 obj-$(CONFIG_SND_SOC_IMX_SI476X) += snd-soc-imx-si476x.o
+obj-$(CONFIG_SND_SOC_IMX_MQS) += snd-soc-imx-mqs.o
 
 AFLAGS_hdmi_pcm.o := -march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=softfp
