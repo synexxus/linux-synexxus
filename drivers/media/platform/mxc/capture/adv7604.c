@@ -186,6 +186,11 @@ static int adv7604_init_default_hdmi(void)
 	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x3e, 0x00);	/* Color Conversion controls */
 	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xc3, 0x39);	/* CP Coast Controls */
 	//adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0x40, 0x80);	/* CP Core Pre Gain */
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xBA, 0x03); // Force HDMI free run mode
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xBF, 0x13); // Force CP Blue output and free run
+	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_CP_SLAVE_ADDRESS, 0xC0, 0x00); // Set default color channel A
+
+
 	
 	printk(KERN_INFO "%s: \tWriting AFE\n",__func__);
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_AFE_SLAVE_ADDRESS, 0x00, 0xFF);	/* Power Off Macrovision */
@@ -206,8 +211,7 @@ static int adv7604_init_default_hdmi(void)
 	// adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x42);	// Power Down VDP Core
 	adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0x0C, 0x40); // Brings up operational mode
 
-adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0xBA, 0x03); // Force HDMI free run mode
-adv7604_generic_i2c_byte_write(adv7604_data.i2c_client, ADV7604_DEFAULT_IO_MAP_I2C_ADDR, 0xBF, 0x13); // Force CP Blue output and free run
+
 	
 
 /* Force Power Up all cores/clocks and disables POWER_DOWN and PWR_SAVE_MODE of oeperation */
