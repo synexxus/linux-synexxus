@@ -28,3 +28,6 @@ obj-$(CONFIG_MXC_VADC) += mxc_vadc_tvin.o
 
 gs2971_video-objs := gs2971.o
 obj-$(CONFIG_MXC_VIDEO_GS2971) += gs2971_video.o
+
+adv7604_camera-objs := adv7604.o
+obj-$(CONFIG_MXC_DECODER_ADV7604) += adv7604_camera.o
