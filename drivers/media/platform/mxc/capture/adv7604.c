@@ -188,14 +188,16 @@ static void adv7604_soft_reset(void)
  */
 static void adv7604_update_pixel_values(void)
 {
+	const struct v4l2_bt_timings *bt = &adv7604_data.curr_vid_std[adv7604_data.curr_vid_std_index].timings.bt;
 	LOG_FUNCTION_NAME;
-	adv7604_data.pix.width = adv7604_data.curr_vid_std[adv7604_data.curr_vid_std_index].timings.bt.width;
-	adv7604_data.pix.height = adv7604_data.curr_vid_std[adv7604_data.curr_vid_std_index].timings.bt.height;
+
+	adv7604_data.pix.width = bt->width;
+	adv7604_data.pix.height = bt->height;
 	/* TODO Add crop values for each resolutions */
-	adv7604_data.spix.top = 0;
-	adv7604_data.spix.left = 0;
-	adv7604_data.spix.swidth = adv7604_data.pix.width + adv7604_data.spix.left;
-	adv7604_data.spix.sheight = adv7604_data.pix.height + adv7604_data.spix.top;
+	adv7604_data.spix.top = bt->vbackporch;
+	adv7604_data.spix.left = bt->hbackporch;
+	adv7604_data.spix.swidth = bt->width + bt->hfrontporch + bt->hsync + bt->hbackporch;
+	adv7604_data.spix.sheight = bt->height + bt->vfrontporch + bt->vsync + bt->vbackporch;
 	pr_info("%s: pix.width = %d, pix.height = %d\n",
 			__func__, adv7604_data.pix.width, adv7604_data.pix.height);
 	LOG_FUNCTION_NAME_EXIT;
@@ -1181,7 +1183,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct adv7604_sensor_data *sensor = s->priv;
 	//u32 tgt_xclk;	/* target xclk */
-	int ret;
+	int ret = 0;
 	struct ipu_soc *ipur;						// Added from reference
 
 	dbg(KERN_INFO "%s: \n",__func__);
