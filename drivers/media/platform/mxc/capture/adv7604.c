@@ -48,8 +48,8 @@
 #define LOG_FUNCTION_NAME printk("[%d] : %s : %s() ENTER\n", __LINE__, __FILE__, __FUNCTION__)
 #define LOG_FUNCTION_NAME_EXIT printk("[%d] : %s : %s() EXIT\n", __LINE__, __FILE__,  __FUNCTION__)
 #else
-#define LOG_FUNCTION_NAME (0)
-#define LOG_FUNCTION_NAME_EXIT (0)
+#define LOG_FUNCTION_NAME if (0)
+#define LOG_FUNCTION_NAME_EXIT if (0)
 #endif
 
 
@@ -192,8 +192,8 @@ static void adv7604_update_pixel_values(void)
 	adv7604_data.pix.width = adv7604_data.curr_vid_std[adv7604_data.curr_vid_std_index].timings.bt.width;
 	adv7604_data.pix.height = adv7604_data.curr_vid_std[adv7604_data.curr_vid_std_index].timings.bt.height;
 	/* TODO Add crop values for each resolutions */
-	adv7604_data.spix.top = 24;
-	adv7604_data.spix.left = 90;
+	adv7604_data.spix.top = 0;
+	adv7604_data.spix.left = 0;
 	adv7604_data.spix.swidth = adv7604_data.pix.width + adv7604_data.spix.left;
 	adv7604_data.spix.sheight = adv7604_data.pix.height + adv7604_data.spix.top;
 	pr_info("%s: pix.width = %d, pix.height = %d\n",
@@ -613,11 +613,11 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 	memset(p, 0, sizeof(*p));
 	p->u.bt656.clock_curr = adv7604_data.mclk;
 	pr_debug("   clock_curr=mclk=%d\n", adv7604_data.mclk);
-	p->if_type = V4L2_IF_TYPE_BT656;
+	p->if_type = V4L2_IF_TYPE_BT1120_PROGRESSIVE_SDR;
 	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT;
 	p->u.bt656.clock_min = ADV7604_XCLK_MIN;
 	p->u.bt656.clock_max = ADV7604_XCLK_MAX;
-	p->u.bt656.bt_sync_correct = 1;  /* Indicate external vsync */
+	p->u.bt656.bt_sync_correct = 0;  /* Indicate internal vsync */
 	LOG_FUNCTION_NAME_EXIT;
 
 	return 0;
@@ -1204,9 +1204,6 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
  */
 static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
-	struct adv7604_sensor_data *sensor = s->priv;
-	struct ipu_soc *ipur;						// Added from reference
-
 	dbg(KERN_INFO "%s: \n",__func__);
 	return 0;
 }
@@ -1316,7 +1313,7 @@ static int adv7604_core_init(void)
 
 	/* video format */
 	io_write(0x02, 0xf0);   /* Auto CSC and YUV out */
-	io_write(0x03, 0x0); /* 8 bit o/p mode */
+	io_write(0x03, 0x80); /* 16 bit ITU 656 SDR o/p mode */
 #if 0
 	io_write_and_or(sd, 0x05, 0xf0, pdata->blank_data << 3 |
 					pdata->insert_av_codes << 2 |
@@ -1336,6 +1333,7 @@ static int adv7604_core_init(void)
 			      ADI recommended setting [REF_01, c. 2.3.3] */
 	cp_write(0xc9, 0x2d); /* use prim_mode and vid_std as free run resolution
 				     for digital formats */
+	cp_write(0x7b, 0x1); /* SAV code at HS falling edge and EAV code at HS rising edge */
 
 	/* TODO from platform data */
 	afe_write(0xb5, 0x01);  /* Setting MCLK to 256Fs */
@@ -1435,7 +1433,7 @@ static int adv7604_probe(struct i2c_client *client,
 
 	adv7604_data.io_init = adv7604_reset;
 	adv7604_data.i2c_client = client;
-	adv7604_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
+	adv7604_data.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	adv7604_data.pix.width = 800;
 	adv7604_data.pix.height = 600;
 	adv7604_data.streamcap.capability = V4L2_MODE_HIGHQUALITY || V4L2_CAP_TIMEPERFRAME;
@@ -1462,8 +1460,8 @@ static int adv7604_probe(struct i2c_client *client,
 
 	/* TODO Add Default crop values for all resolutions to get proper Frame
 	 * from camera */
-	adv7604_data.spix.top = 20;
-	adv7604_data.spix.left = 210;
+	adv7604_data.spix.top = 0;
+	adv7604_data.spix.left = 0;
 	adv7604_data.spix.swidth = adv7604_data.pix.width + adv7604_data.spix.left;
 	adv7604_data.spix.sheight = adv7604_data.pix.height + adv7604_data.spix.top;
 
