@@ -901,6 +901,9 @@ struct adv7604_sensor_data {
 
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
+/* Supported Sensor Modes: 0 to 3 */
+#define ADV7604_HDMI_CH_SHIFT 10
+#define ADV7604_HDMI_CH_MASK (0x3 << ADV7604_HDMI_CH_SHIFT)
 /* Supported Sensor Modes:
  *		HDMI_GR	:0
  *		VGA_GR	:1

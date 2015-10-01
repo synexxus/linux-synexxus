@@ -203,6 +203,11 @@ static void adv7604_update_pixel_values(void)
 	LOG_FUNCTION_NAME_EXIT;
 }
 
+static int adv7604_s_hdmi_ch(int hdmi_ch)
+{
+	return hdmi_write(0x0, hdmi_ch);
+}
+
 static int adv7604_init_default_mode(void)
 {
 	int retval = 0;
@@ -712,7 +717,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
 	struct adv7604_sensor_data *sensor = s->priv;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
-	int sensor_mode, prim_mode, ret = 0;
+	int sensor_mode, prim_mode, hdmi_ch, ret = 0;
 
 	LOG_FUNCTION_NAME;
 
@@ -737,6 +742,12 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			prim_mode = (sensor->streamcap.capturemode & ADV7604_PRIM_MODE_MASK) >> ADV7604_PRIM_MODE_SHIFT;
 			pr_info("%s - Prim Mode = %d\n", __func__, prim_mode);
 			/* TODO Check for Prim mode Maximum */
+			/* Find HDMI Channel in case of HDMI Input */
+			if (sensor_mode == ADV7604_SENSOR_MODE_HDMI_GR) {
+				hdmi_ch = (sensor->streamcap.capturemode & ADV7604_HDMI_CH_MASK) >> ADV7604_HDMI_CH_SHIFT;
+				pr_info("%s - HDMI Channel = %d\n", __func__, hdmi_ch);
+				adv7604_s_hdmi_ch(hdmi_ch);
+			}
 			adv7604_s_routing(sensor_mode);
 			ret = adv7604_change_mode(prim_mode);
 			break;
