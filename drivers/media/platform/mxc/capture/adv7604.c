@@ -106,6 +106,15 @@ static struct i2c_driver adv7604_i2c_driver = {
  *  Functions specific to the driver
  **********************************************************************
  */
+static inline unsigned vtotal(const struct v4l2_bt_timings *t)
+{
+	return t->height + t->vfrontporch + t->vsync + t->vbackporch;
+}
+
+static inline unsigned htotal(const struct v4l2_bt_timings *t)
+{
+	return t->width + t->hfrontporch + t->hsync + t->hbackporch;
+}
 
 static inline int cp_read(u8 reg)
 {
@@ -152,6 +161,11 @@ static inline void adv7604_power_down(int enable)
 	(enable == 0 ) ? dbg(KERN_INFO "%s: DISABLED\n",__func__) : dbg(KERN_INFO "%s: ENABLED\n",__func__);;
 	//if(&adv7604_data.pwn_gpio != NULL)
 	//	gpio_set_value(adv7604_data.pwn_gpio, enable);
+	/* power */
+	if (enable)
+		io_write(0x0c, 0x20);   /* Power Down Part */
+	else
+		io_write(0x0c, 0x02);   /* Power up part and power down VDP */
 
 	msleep(400);
 }
@@ -228,10 +242,8 @@ static void enable_input()
 		break;
 	case ADV7604_SENSOR_MODE_HDMI_GR:
 		/* enable */
-		hdmi_write(0x1a, 0x0a); /* Unmute audio */
 		hdmi_write(0x01, 0x00); /* Enable HDMI clock terminators */
-		io_write(0x15, 0xa0);   /* Disable Tristate of Pins */
-		io_write(0x0c, 0x0); /* Syncs Channel 2 or channel 1 */
+		io_write(0x15, 0xb0);   /* Disable Tristate of Pins */
 		break;
 	default:
 		pr_debug("%s: Unknown mode %d\n", __func__, sensor->sensor_mode);
@@ -382,6 +394,9 @@ static int find_and_set_predefined_video_timings(u8 prim_mode,
 		if (!v4l_match_dv_timings(timings, &predef_vid_timings[i].timings,
 					DIGITAL_INPUT ? 250000 : 1000000))
 			continue;
+		/* Custom Video timings define their vid_std as 0x3f */
+		if (predef_vid_timings[i].vid_std == 0x3f)
+			continue;
 		io_write(0x00, predef_vid_timings[i].vid_std); /* video std */
 		io_write(0x01, (predef_vid_timings[i].v_freq << 4) +
 				prim_mode); /* v_freq and prim mode */
@@ -392,12 +407,9 @@ static int find_and_set_predefined_video_timings(u8 prim_mode,
 	return -1;
 }
 
-#if 0
-static void configure_custom_video_timings(struct v4l2_subdev *sd,
-		const struct v4l2_bt_timings *bt)
+static void configure_custom_video_timings(const struct v4l2_bt_timings *bt)
 {
-	struct adv7604_state *state = to_state(sd);
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct adv7604_sensor_data *sensor = &adv7604_data;
 	u32 width = htotal(bt);
 	u32 height = vtotal(bt);
 	u16 cp_start_sav = bt->hsync + bt->hbackporch - 4;
@@ -411,11 +423,12 @@ static void configure_custom_video_timings(struct v4l2_subdev *sd,
 		width & 0xff
 	};
 
-	pr_debug("%s\n", __func__);
-
-	switch (state->mode) {
-	case ADV7604_MODE_COMP:
-	case ADV7604_MODE_GR:
+	pr_debug("%s: Width = %d, height = %d\n", __func__, width, height);
+	pr_debug("%s: ch1_fr_ll = %d cp_start_sav = %d cp_start_eav = %d\n", __func__, ch1_fr_ll, cp_start_sav, cp_start_eav);
+	pr_debug("%s: cp_start_vbi = %d, cp_end_vbi = %d\n", __func__, cp_start_vbi, cp_end_vbi);
+	LOG_FUNCTION_NAME;
+	switch (sensor->sensor_mode) {
+	case ADV7604_SENSOR_MODE_GR:
 		/* auto graphics */
 		io_write(0x00, 0x07); /* video std */
 		io_write(0x01, 0x02); /* prim mode */
@@ -425,8 +438,8 @@ static void configure_custom_video_timings(struct v4l2_subdev *sd,
 		/* Should only be set in auto-graphics mode [REF_02, p. 91-92] */
 		/* setup PLL_DIV_MAN_EN and PLL_DIV_RATIO */
 		/* IO-map reg. 0x16 and 0x17 should be written in sequence */
-		if (adv_smbus_write_i2c_block_data(client, 0x16, 2, pll)) {
-			v4l2_err(sd, "writing to reg 0x16 and 0x17 failed\n");
+		if (adv7604_smbus_write_i2c_block_data(adv7604_data.i2c_client, 0x16, 2, pll)) {
+			pr_err("writing to reg 0x16 and 0x17 failed\n");
 			break;
 		}
 
@@ -442,15 +455,15 @@ static void configure_custom_video_timings(struct v4l2_subdev *sd,
 					((cp_end_vbi >> 8) & 0xf));
 		cp_write(0xa7, cp_end_vbi & 0xff);
 		break;
-	case ADV7604_MODE_HDMI:
+	case ADV7604_SENSOR_MODE_HDMI_GR:
 		/* set default prim_mode/vid_std for HDMI
-		   accoring to [REF_03, c. 4.2] */
+		   according to [REF_03, c. 4.2] */
 		io_write(0x00, 0x02); /* video std */
 		io_write(0x01, 0x06); /* prim mode */
 		break;
 	default:
 		pr_debug("%s: Unknown mode %d\n",
-				__func__, state->mode);
+				__func__, sensor->sensor_mode);
 		break;
 	}
 
@@ -458,8 +471,8 @@ static void configure_custom_video_timings(struct v4l2_subdev *sd,
 	cp_write(0x90, ch1_fr_ll & 0xff);
 	cp_write(0xab, (height >> 4) & 0xff);
 	cp_write(0xac, (height & 0x0f) << 4);
+	LOG_FUNCTION_NAME_EXIT;
 }
-#endif
 
 static int configure_predefined_video_timings(const struct v4l2_dv_timings *timings)
 {
@@ -552,7 +565,7 @@ static int adv7604_s_dv_timings(const struct v4l2_dv_timings *timings)
 	if (err) {
 		/* custom settings when the video format
 		 does not have prim_mode/vid_std */
-		//configure_custom_video_timings(sd, bt);
+		configure_custom_video_timings(bt);
 	}
 
 	//set_rgb_quantization_range(sd);
@@ -1011,11 +1024,24 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 {
 	struct adv7604_sensor_data *sensor = s->priv;
 	const struct adv7604_video_standards *vid_list = sensor->curr_vid_std;
-	int vid_list_size = sensor->curr_vid_std_size;
+	int vid_list_size;
 	int index = fsize->index & ADV7604_PRIM_MODE_MASK;
+	int sensor_mode = (fsize->index & ADV7604_SENSOR_MODE_MASK) >> ADV7604_SENSOR_MODE_SHIFT;
 
 	LOG_FUNCTION_NAME;
-	fsize->pixel_format = adv7604_data.pix.pixelformat;
+	pr_info("%s: sensor_mode = %x, index = %x\n", __func__, sensor_mode, index);
+	switch (sensor_mode) {
+		case ADV7604_SENSOR_MODE_GR:
+			vid_list = adv7604_prim_mode_gr;
+			vid_list_size = ADV7604_CAPTURE_GR_MAX_SIZE;
+			break;
+		case ADV7604_SENSOR_MODE_HDMI_GR:
+			vid_list = adv7604_prim_mode_hdmi_gr;
+			vid_list_size = ADV7604_CAPTURE_HDMI_GR_MAX_SIZE;
+			break;
+		default:
+			return -EINVAL;
+	}
 
 	if(index >= vid_list_size)
 		return -EINVAL;
@@ -1193,19 +1219,12 @@ static int adv7604_update_edid(const struct v4l2_bt_timings  *bt)
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct adv7604_sensor_data *sensor = s->priv;
-	//u32 tgt_xclk;	/* target xclk */
 	int ret = 0;
 	struct ipu_soc *ipur;						// Added from reference
-
-	dbg(KERN_INFO "%s: \n",__func__);
-	adv7604_data.on = true;
 
 	ipur = ipu_get_soc(sensor->ipu_id);						// Added from reference AR0134
 	ipu_enable_csi(ipur, sensor->csi);						// Added from reference AR0134
 
-	/* TODO Initialize default mode as per entry in device tree */
-	adv7604_s_routing(ADV7604_SENSOR_MODE_GR);
-	adv7604_change_mode(ADV7604_CAPTURE_GR_SVGA_60);
 	return ret;
 }
 
@@ -1217,7 +1236,11 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
  */
 static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
-	dbg(KERN_INFO "%s: \n",__func__);
+	struct ipu_soc *ipur;						// Added from reference
+	struct adv7604_sensor_data *sensor = s->priv;
+
+	ipur = ipu_get_soc(sensor->ipu_id);						// Added from reference AR0134
+	ipu_disable_csi(ipur, sensor->csi);						// Added from reference AR0134
 	return 0;
 }
 
@@ -1264,6 +1287,19 @@ static struct v4l2_int_device adv7604_int_device = {
 /***********************************************************************
  * I2C client and driver.
  ***********************************************************************/
+static s32 adv7604_smbus_write_i2c_block_data(struct i2c_client *client,
+	       u8 command, unsigned length, const u8 *values)
+{
+	union i2c_smbus_data data;
+
+	if (length > I2C_SMBUS_BLOCK_MAX)
+		length = I2C_SMBUS_BLOCK_MAX;
+	data.block[0] = length;
+	memcpy(data.block + 1, values, length);
+	return i2c_smbus_xfer(client->adapter, client->addr, client->flags,
+			      I2C_SMBUS_WRITE, command,
+			      I2C_SMBUS_I2C_BLOCK_DATA, &data);
+}
 
 static s32 adv7604_generic_i2c_byte_write(struct i2c_client *client, u8 addr, u8 reg, u8 val)
 {
@@ -1320,7 +1356,7 @@ static int adv7604_core_init(void)
 	disable_input();
 
 	/* power */
-	io_write(0x0c, 0x42);   /* Power up part and power down VDP */
+	io_write(0x0c, 0x02);   /* Power up part and power down VDP */
 	io_write(0x0b, 0x44);   /* Power down ESDP block */
 	cp_write(0xcf, 0x01);   /* Power down macrovision */
 
@@ -1467,8 +1503,6 @@ static int adv7604_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	adv7604_power_down(1);
-
 	clk_disable_unprepare(adv7604_data.sensor_clk);
 
 	/* TODO Add Default crop values for all resolutions to get proper Frame
@@ -1483,7 +1517,12 @@ static int adv7604_probe(struct i2c_client *client,
 	retval = v4l2_int_device_register(&adv7604_int_device);
 
 	adv7604_core_init();
+	/* TODO Initialize default mode as per entry in device tree */
+	adv7604_s_routing(ADV7604_SENSOR_MODE_GR);
+	adv7604_change_mode(ADV7604_CAPTURE_GR_SVGA_60);
 	pr_info(KERN_INFO "%s ADV7604 Registered Successfully\n", __func__);
+
+	adv7604_power_down(1);
 
 	return retval;
 }

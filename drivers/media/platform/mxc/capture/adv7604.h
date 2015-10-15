@@ -26,6 +26,28 @@
 #ifndef _ADV7604_
 #define _ADV7604_
 
+#define V4L2_DV_BT_CEA_1280X720P60_2 { \
+	.type = V4L2_DV_BT_656_1120, \
+	V4L2_INIT_BT_TIMINGS(1360, 720, 0, \
+	V4L2_DV_HSYNC_POS_POL | V4L2_DV_VSYNC_POS_POL, \
+		74250000, 100, 40, 220, 5, 5, 20, 0, 0, 0, \
+		V4L2_DV_BT_STD_CEA861, V4L2_DV_FL_CAN_REDUCE_FPS) \
+}
+#if 0
+#define V4L2_DV_BT_DMT_1280X800P60_2 { \
+	.type = V4L2_DV_BT_656_1120, \
+	V4L2_INIT_BT_TIMINGS(1280, 800, 0, V4L2_DV_VSYNC_POS_POL, \
+		92500000, 208, 128, 240, 3, 6, 22, 0, 0, 0, \
+		V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT, 0) \
+}
+#else
+#define V4L2_DV_BT_DMT_1280X800P60_2 { \
+	.type = V4L2_DV_BT_656_1120, \
+	V4L2_INIT_BT_TIMINGS(1408, 800, 0, V4L2_DV_VSYNC_POS_POL, \
+		92500000, 96, 128, 224, 3, 6, 22, 0, 0, 0, \
+		V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT, 0) \
+}
+#endif
 	#include <linux/clk.h>
 	#include <linux/delay.h>
 	#include <linux/device.h>
@@ -953,44 +975,51 @@ enum adv7604_gr_capture_modes {
 //	ADV7604_CAPTURE_GR_UXGAR_60	= 0x17,	/* 1600x1200@60 reduced */
 	ADV7604_CAPTURE_GR_WSXGA_60,	/* 1680x1050@60  */
 	ADV7604_CAPTURE_GR_WUXGA_60,	/* 1920x1200@60 reduced */
+	ADV7604_CAPTURE_GR_720P_60, 	/* 1280x720@60 custom */
+	ADV7604_CAPTURE_GR_WXGA2_60,	/* 1280x800@60 Custom */
+	ADV7604_CAPTURE_GR_SXGAM_60,	/* 1280x960@60 Custom */
 
 	ADV7604_CAPTURE_GR_MAX_SIZE,
 };
 
 /* sorted by number of lines */
 static const struct adv7604_video_standards adv7604_prim_mode_gr[] = {
-	{ V4L2_DV_BT_DMT_640X480P60, 0x08, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_640X480P72, 0x09, 0x00 , 2, 72},
-	{ V4L2_DV_BT_DMT_640X480P75, 0x0a, 0x00 , 2, 75},
-	{ V4L2_DV_BT_DMT_640X480P85, 0x0b, 0x00 , 2, 85},
+	{ V4L2_DV_BT_DMT_640X480P60, 0x08, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_640X480P72, 0x09, 0x00, 2, 72},
+	{ V4L2_DV_BT_DMT_640X480P75, 0x0a, 0x00, 2, 75},
+	{ V4L2_DV_BT_DMT_640X480P85, 0x0b, 0x00, 2, 85},
 
-	{ V4L2_DV_BT_DMT_800X600P56, 0x00, 0x00 , 2, 56},
-	{ V4L2_DV_BT_DMT_800X600P60, 0x01, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_800X600P72, 0x02, 0x00 , 2, 72},
-	{ V4L2_DV_BT_DMT_800X600P75, 0x03, 0x00 , 2, 75},
-	{ V4L2_DV_BT_DMT_800X600P85, 0x04, 0x00 , 2, 85},
+	{ V4L2_DV_BT_DMT_800X600P56, 0x00, 0x00, 2, 56},
+	{ V4L2_DV_BT_DMT_800X600P60, 0x01, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_800X600P72, 0x02, 0x00, 2, 72},
+	{ V4L2_DV_BT_DMT_800X600P75, 0x03, 0x00, 2, 75},
+	{ V4L2_DV_BT_DMT_800X600P85, 0x04, 0x00, 2, 85},
 
-	{ V4L2_DV_BT_DMT_1024X768P60, 0x0c, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1024X768P70, 0x0d, 0x00 , 2, 70},
-	{ V4L2_DV_BT_DMT_1024X768P75, 0x0e, 0x00 , 2, 75},
-	{ V4L2_DV_BT_DMT_1024X768P85, 0x0f, 0x00 , 2, 85},
+	{ V4L2_DV_BT_DMT_1024X768P60, 0x0c, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1024X768P70, 0x0d, 0x00, 2, 70},
+	{ V4L2_DV_BT_DMT_1024X768P75, 0x0e, 0x00, 2, 75},
+	{ V4L2_DV_BT_DMT_1024X768P85, 0x0f, 0x00, 2, 85},
 
-	{ V4L2_DV_BT_DMT_1280X1024P60, 0x05, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1280X1024P75, 0x06, 0x00 , 2, 75},
+	{ V4L2_DV_BT_DMT_1280X1024P60, 0x05, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1280X1024P75, 0x06, 0x00, 2, 75},
 
-	{ V4L2_DV_BT_DMT_1280X768P60, 	 0x10, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1280X768P60_RB, 0x11, 0x00 , 2, 60},
+	{ V4L2_DV_BT_DMT_1280X768P60, 	 0x10, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1280X768P60_RB, 0x11, 0x00, 2, 60},
 
-	{ V4L2_DV_BT_DMT_1360X768P60, 0x12, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1366X768P60, 0x13, 0x00 , 2, 60},
+	{ V4L2_DV_BT_DMT_1360X768P60, 0x12, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1366X768P60, 0x13, 0x00, 2, 60},
 
-	{ V4L2_DV_BT_DMT_1400X1050P60, 0x14, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1400X1050P75, 0x15, 0x00 , 2, 75},
+	{ V4L2_DV_BT_DMT_1400X1050P60, 0x14, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1400X1050P75, 0x15, 0x00, 2, 75},
 
-	{ V4L2_DV_BT_DMT_1600X1200P60, 0x16, 0x00 , 2, 60}, /* TODO not tested */
+	{ V4L2_DV_BT_DMT_1600X1200P60, 0x16, 0x00, 2, 60}, /* TODO not tested */
 	/* TODO add 1600X1200P60_RB (not a DMT timing) */
-	{ V4L2_DV_BT_DMT_1680X1050P60, 0x18, 0x00 , 2, 60},
-	{ V4L2_DV_BT_DMT_1920X1200P60_RB, 0x19, 0x00 , 2, 60}, /* TODO not tested */
+	{ V4L2_DV_BT_DMT_1680X1050P60, 0x18, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1920X1200P60_RB, 0x19, 0x00, 2, 60}, /* TODO not tested */
+	/* Resolutions requiring Custom timings */
+	{ V4L2_DV_BT_CEA_1280X720P60_2, 0x3f, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1280X800P60_2, 0x3f, 0x00, 2, 60},
+	{ V4L2_DV_BT_DMT_1280X960P60, 0x3f, 0x00, 2, 60},
 	{ },
 };
 
@@ -1014,29 +1043,34 @@ enum adv7604_hdmi_gr_capture_modes {
 
 	ADV7604_CAPTURE_HDMI_GR_SXGA_60,	/* 1280x1024@60 */
 	ADV7604_CAPTURE_HDMI_GR_SXGA_75,	/* 1280x1024@75 */
+	ADV7604_CAPTURE_HDMI_GR_WXGA2_60,	/* 1280x800@60 Custom */
+	ADV7604_CAPTURE_HDMI_GR_1080P_60,	/* 1920x1080@60 Custom */
 	ADV7604_CAPTURE_HDMI_GR_MAX_SIZE,
 };
 
 /* sorted by number of lines */
 static const struct adv7604_video_standards adv7604_prim_mode_hdmi_gr[] = {
-	{ V4L2_DV_BT_DMT_640X480P60, 0x08, 0x00 , 6 , 60},
-	{ V4L2_DV_BT_DMT_640X480P72, 0x09, 0x00 , 6, 72},
-	{ V4L2_DV_BT_DMT_640X480P75, 0x0a, 0x00 , 6, 75},
-	{ V4L2_DV_BT_DMT_640X480P85, 0x0b, 0x00 , 6, 85},
+	{ V4L2_DV_BT_DMT_640X480P60, 0x08, 0x00, 6, 60},
+	{ V4L2_DV_BT_DMT_640X480P72, 0x09, 0x00, 6, 72},
+	{ V4L2_DV_BT_DMT_640X480P75, 0x0a, 0x00, 6, 75},
+	{ V4L2_DV_BT_DMT_640X480P85, 0x0b, 0x00, 6, 85},
 
-	{ V4L2_DV_BT_DMT_800X600P56, 0x00, 0x00 , 6, 56},
-	{ V4L2_DV_BT_DMT_800X600P60, 0x01, 0x00 , 6, 60},
-	{ V4L2_DV_BT_DMT_800X600P72, 0x02, 0x00 , 6, 72},
-	{ V4L2_DV_BT_DMT_800X600P75, 0x03, 0x00 , 6, 75},
-	{ V4L2_DV_BT_DMT_800X600P85, 0x04, 0x00 , 6, 85},
+	{ V4L2_DV_BT_DMT_800X600P56, 0x00, 0x00, 6, 56},
+	{ V4L2_DV_BT_DMT_800X600P60, 0x01, 0x00, 6, 60},
+	{ V4L2_DV_BT_DMT_800X600P72, 0x02, 0x00, 6, 72},
+	{ V4L2_DV_BT_DMT_800X600P75, 0x03, 0x00, 6, 75},
+	{ V4L2_DV_BT_DMT_800X600P85, 0x04, 0x00, 6, 85},
 
-	{ V4L2_DV_BT_DMT_1024X768P60, 0x0c, 0x00 , 6, 60},
-	{ V4L2_DV_BT_DMT_1024X768P70, 0x0d, 0x00 , 6, 70},
-	{ V4L2_DV_BT_DMT_1024X768P75, 0x0e, 0x00 , 6, 75},
-	{ V4L2_DV_BT_DMT_1024X768P85, 0x0f, 0x00 , 6, 85},
+	{ V4L2_DV_BT_DMT_1024X768P60, 0x0c, 0x00, 6, 60},
+	{ V4L2_DV_BT_DMT_1024X768P70, 0x0d, 0x00, 6, 70},
+	{ V4L2_DV_BT_DMT_1024X768P75, 0x0e, 0x00, 6, 75},
+	{ V4L2_DV_BT_DMT_1024X768P85, 0x0f, 0x00, 6, 85},
 
-	{ V4L2_DV_BT_DMT_1280X1024P60, 0x05, 0x00 , 6, 60},
-	{ V4L2_DV_BT_DMT_1280X1024P75, 0x06, 0x00 , 6, 75},
+	{ V4L2_DV_BT_DMT_1280X1024P60, 0x05, 0x00, 6, 60},
+	{ V4L2_DV_BT_DMT_1280X1024P75, 0x06, 0x00, 6, 75},
+
+	{ V4L2_DV_BT_DMT_1280X800P60_2, 0x3f, 0x00, 6, 60},
+	{ V4L2_DV_BT_CEA_1280X720P60, 0x3f, 0x00, 6, 60},
 	{ },
 };
 
@@ -1169,6 +1203,7 @@ static s32 adv7604_generic_i2c_byte_write(struct i2c_client *client, u8 addr, u8
 
 static void adv7604_soft_reset(void);
 static inline void adv7604_reset(void);
+static int adv7604_core_init(void);
 
 static inline void adv7604_power_down(int);
 
@@ -1188,7 +1223,8 @@ static int configure_predefined_video_timings(const struct v4l2_dv_timings *timi
 static int find_and_set_predefined_video_timings(u8 prim_mode,
 		        const struct adv7604_video_standards *predef_vid_timings,
 		        const struct v4l2_dv_timings *timings);
-	
+static s32 adv7604_smbus_write_i2c_block_data(struct i2c_client *client,
+		u8 command, unsigned length, const u8 *values);
 
 #endif
 /* END OF FILE */

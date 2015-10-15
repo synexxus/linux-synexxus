@@ -1665,6 +1665,7 @@ static void power_down_callback(struct work_struct *work)
 	cam_data *cam = container_of(work, struct _cam_data, power_down_work.work);
 
 	down(&cam->busy_lock);
+	vidioc_int_dev_exit(cam->sensor);
 	if (!cam->open_count) {
 		pr_info("%s: ipu%d/csi%d\n", __func__, cam->ipu_id, cam->csi);
 		vidioc_int_s_power(cam->sensor, 0);
