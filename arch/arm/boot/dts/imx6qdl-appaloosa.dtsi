@@ -47,7 +47,7 @@
 
 		// This is the LVDS_PANEL_EN (DISP_PWR_EN Net)
 		// Was &gpio6 14 0 for the Highlander board & on Aristeus
-		enable-gpios = <&gpio6 14 0>;
+		enable-gpios = <&gpio6 16 0>;
 	};
 
 	clocks {
@@ -99,10 +99,12 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		//BBBdefault_bpp = <16>;
+		default_bpp = <10>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "disabled";
+		//BBBstatus = "disabled";
+		status = "okay";
 	};
 
 	mxcfb2: fb@1 {
@@ -119,9 +121,11 @@
 	mxcfb3: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
-		interface_pix_fmt = "RGB565";
-		mode_str ="CLAA-WVGA";
-		default_bpp = <16>;
+		interface_pix_fmt = "RGB666";
+		//BBBinterface_pix_fmt = "RGB565";
+		//BBBmode_str ="CLAA-WVGA";
+		//BBBdefault_bpp = <16>;
+		default_bpp = <10>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
@@ -153,10 +157,11 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		//BBBdefault_bpp = <16>;
+		default_bpp = <10>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	lcd_display: fb@2 {
@@ -173,10 +178,12 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		//BBBdefault_bpp = <16>;
+		default_bpp = <10>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "disabled";
+		//BBBstatus = "disabled";
+		status = "okay";
 	};
 
 	lcd0: lcd@0 {
@@ -209,6 +216,107 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
+	
+	gpio_keys_bezel {
+		compatible = "gpio-keys";
+		
+		exInput0 {
+			label = "KEY 0";
+			gpios = <&expander 0 GPIO_ACTIVE_LOW>;	
+			linux,code = <11>;      
+                };
+		exInput1 {
+                        label = "KEY 1";
+                        gpios = <&expander 1 GPIO_ACTIVE_LOW>;  
+                        linux,code = <2>;       
+                };
+		exInput2 {
+                        label = "KEY 2";
+                        gpios = <&expander 2 GPIO_ACTIVE_LOW>;  
+                        linux,code = <3>;       
+                };
+		exInput3 {
+                        label = "KEY 3";
+                        gpios = <&expander 3 GPIO_ACTIVE_LOW>;  
+                        linux,code = <4>;     
+                };
+		exInput4 {
+                        label = "KEY 4";
+                        gpios = <&expander 4 GPIO_ACTIVE_LOW>;  
+                        linux,code = <5>;      
+                };
+		exInput5 {
+                        label = "KEY 5";
+                        gpios = <&expander 5 GPIO_ACTIVE_LOW>;  
+                        linux,code = <6>;     
+                };
+		exInput6 {
+                        label = "KEY 6";
+                        gpios = <&expander 6 GPIO_ACTIVE_LOW>;  
+                        linux,code = <7>;      
+                };
+		exInput7 {
+                        label = "KEY 7";
+                        gpios = <&expander 7 GPIO_ACTIVE_LOW>;  
+                        linux,code = <8>;      
+                };
+		exInput8 {
+                        label = "KEY 8";
+                        gpios = <&expander 8 GPIO_ACTIVE_LOW>;
+                        linux,code = <9>;    
+                };
+                exInput9 {
+                        label = "KEY 9";
+                        gpios = <&expander 9 GPIO_ACTIVE_LOW>;
+                        linux,code = <10>;       
+                };
+                exInput10 {
+                        label = "KEY A";
+                        gpios = <&expander 10 GPIO_ACTIVE_LOW>;
+                        linux,code = <30>;    
+                };
+                exInput11 {
+                        label = "KEY B";
+                        gpios = <&expander 11 GPIO_ACTIVE_LOW>;
+                        linux,code = <48>;      
+                };
+                exInput12 {
+                        label = "KEY C";
+                        gpios = <&expander 12 GPIO_ACTIVE_LOW>;
+                        linux,code = <46>;      
+                };
+                exInput13 {
+                        label = "KEY D";
+                        gpios = <&expander 13 GPIO_ACTIVE_LOW>;
+                        linux,code = <32>;
+                };
+                exInput14 {
+                        label = "KEY E";
+                        gpios = <&expander 14 GPIO_ACTIVE_LOW>;
+                        linux,code = <18>;
+                };
+                exInput15 {
+                        label = "KEY F";
+                        gpios = <&expander 15 GPIO_ACTIVE_LOW>;
+                        linux,code = <33>;
+                };
+	};
+
+	leds-bezel {
+		compatiable = "gpio-leds";
+		pinctrl-0 = <&pinctrl_bezelled>;
+		pinctrl-names = "default";
+	
+		bezel-blue {
+			label ="BEZEL_BLUE";
+			gpios = <&gpio2 2 GPIO_ACTIVE_LOW>;
+		};
+		bezel-green {
+			label ="BEZEL_GREEN";
+                        gpios = <&gpio2 1 GPIO_ACTIVE_LOW>;
+		};
+		
+	};
 };
 
 
@@ -222,19 +330,91 @@
 */
 
 &ecspi1 {
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = <&gpio3 19 0>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_1>;
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = <&gpio2 30 0
+		    &gpio3 19 0>;
 
-	flash: m25p80@0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1_1 
+		     &pinctrl_ecspi1_cs_0
+		     &pinctrl_ecspi1_cs_1>;
+	status = "okay";
+
+	// First EEPROM
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <20000000>;
+                reg = <0>;
+        };
+
+	// Second EEPROM (boot)
+        spidev@0x01 {
+                compatible = "spidev";
+                spi-max-frequency = <20000000>;
+                reg = <1>;
+        };
+
+/*	flash: m25p80@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "st,m25p32";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 	};
+*/
 };
+
+&ecspi2 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio5 12 0>, <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2_12
+  		     &pinctrl_ecspi2_cs_12>;
+	status = "okay";
+
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <20000000>;
+                reg = <0>;
+        };
+};
+
+/*
+&ecspi3 {
+	fsl,spi-num-chipselects = <4>;
+	cs-gpios = <&gpio4 24 0>,
+		   <&gpio4 25 0>,
+		   <&gpio4 26 0>,
+		   <&gpio4 27 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3_1 
+	             &pinctrl_ecspi3_cs_1
+		     &pinctrl_ecspi3_cs_2
+		     &pinctrl_ecspi3_cs_3
+		     &pinctrl_ecspi3_cs_4>;
+	status = "okay";
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <0>;
+        };
+        spidev@0x01 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <1>;
+        };
+        spidev@0x02 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <2>;
+        };
+        spidev@0x03 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <3>;
+        };
+};
+*/
 
 &esai {
 	pinctrl-names = "default";
@@ -302,42 +482,27 @@
     pinctrl-0 = <&pinctrl_i2c1_1>;
     status = "okay";
 
-
-};
-
-
-&i2c2 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2_2>;
-	status = "okay";
-
-	hdmi: edid@50 {
-		compatible = "fsl,imx6-hdmi-i2c";
-		reg = <0x50>;
-	};
-
-	adv7604_camera: adv7604_camera@20 { /* i2c1 driver */
+	/*adv7604_camera: adv7604_camera@20 { 	// i2c1 driver 
 		compatible = "adv,adv7604_camera";
 		reg = <0x20>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ipu2_2>;
 		clocks = <&clks 201>;
 		clock-names = "csi_mclk";
-		DOVDD-supply = <&sw2_reg>; /* 3.3v */
-		AVDD-supply = <&vgen4_reg>;  /* 1.8v */
-		DVDD-supply = <&sw2_reg>;  /* 1.8v */
-		//pwn-gpios = <&gpio6 9 1>;   /* Not True */
-		//rst-gpios = <&gpio1 4 0>;   /* Reset Signal */
-		//pwn-gpios = <&gpio5 27 1>;	/* ARISTEUS TEST BOARD POWER DOWN */
-		pwn-gpios = <&gpio6 3 0>;	/* ARISTEUS TEST BOARD POWER DOWN #2*/
-		rst-gpios = <&gpio6 1 0>;	/* ARISTEUS TEST BOARD RESET */
+		DOVDD-supply = <&sw2_reg>; 	// 3.3v 
+		AVDD-supply = <&vgen4_reg>;  	// 1.8v 
+		DVDD-supply = <&sw2_reg>;  	// 1.8v 
+		//pwn-gpios = <&gpio6 9 1>;   	// Not True 
+		//rst-gpios = <&gpio1 4 0>;   	// Reset Signal 
+		//pwn-gpios = <&gpio5 27 1>;	// ARISTEUS TEST BOARD POWER DOWN 
+		pwn-gpios = <&gpio6 3 0>;	// ARISTEUS TEST BOARD POWER DOWN #2
+		rst-gpios = <&gpio6 1 0>;	// ARISTEUS TEST BOARD RESET 
 		ipu_id = <1>;
 		csi_id = <1>;
 		//mclk = <24000000>;		// Gated Mode
 		mclk = <0>;			// BT.656
 		mclk_source = <0>;
-	};
+	};*/
 
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
@@ -440,12 +605,31 @@
 
 };
 
+
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2_2>;
+	status = "okay";
+
+	/* Pericom is on this one! */
+};
+
 &i2c3 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3_3>;
 	status = "okay";
 
+
+	expander: tca6416@20 {
+		compatible = "ti,tca6416";
+		reg = <0x20>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <11 0x2>; /*Pin Active high to low edge*/
+		#gpio-cells = <2>;
+		gpio-controller;
+	};
 };
 
 &iomuxc {
@@ -456,12 +640,16 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0		/* CAN STBY */
-				MX6QDL_PAD_EIM_D19__GPIO3_IO19      	0x80000000  	/* spi-nor CS1 */
+				//MX6QDL_PAD_EIM_D19__GPIO3_IO19      	0x80000000  	/* spi-nor CS1 */
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27    	0x000b0     	/* ethernet phy reset */
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28   	0x1b0b0     	/* ethernet phy interrupt */
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00     	0x80000000  	/* USDHC3 CD */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12      	0x0b0b0       	/* USB Hub Reset */
 
+				//MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* (Output with pullup) USDHC4 (eMMC) RESET Signal*/
+				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x80000000		/* Use u-boot's configuration USDHC4 (eMMC) RESET Signal*/
+				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x1b0b0		/* EN/VDDIO signal for the backlight driver (LP8860) */
+				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x1b0b0		/* PANEL Enable Signal GPIO */
 				>;
 		};
 
@@ -470,7 +658,40 @@
 				MX6QDL_PAD_SD4_DAT7__GPIO2_IO15		0x000b0		/* pcie reset */
 				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0		/* Power-on-GPIO*/
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* False wake up signal*/
-				MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x000b0		/* disable-gpio*/
+				//MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x000b0		/* disable-gpio*/
+			>;
+		};
+		
+		pinctrl_bezelled: bezelled {
+			fsl,pins = <
+				MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x80000000	/* Green LED Switch (On/Off) GPIO */
+				MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x80000000	/* Blue  LED Swotcj (On/Off) GPIO */ 
+			>;
+		};
+
+	};
+
+	ecspi1 {
+		pinctrl_ecspi1_cs_0: ecspi1_cs_grp-0 {
+			fsl,pins = <
+				//EIM_EB2__ECSPI1_SS0
+				MX6QDL_PAD_EIM_EB2__GPIO2_IO30 0x80000000
+			>;
+		};
+	};
+
+	ecspi2 {
+		pinctrl_ecspi2_cs_12: ecspi2_cs_grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12 0x80000000
+			>;
+		};
+		pinctrl_ecspi2_12: ecspi2grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT16__ECSPI2_MOSI 0x100b1
+				MX6QDL_PAD_DISP0_DAT17__ECSPI2_MISO 0x100b1
+				MX6QDL_PAD_DISP0_DAT19__ECSPI2_SCLK 0x100b1
+				//MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12  0x80000000
 			>;
 		};
 	};
@@ -498,11 +719,12 @@
 	status = "okay";
 
 	lvds-channel@0 {
-		//crtc = "ipu1-di1";		
+		crtc = "ipu1-di0";		
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <18>;
+		//BBBstatus = "okay";
 		status = "okay";
-
+		
 		display-timings {
 			native-mode = <&XGA_LVDS0>;
 			XGA_LVDS0: XGA-R-0 {
@@ -531,8 +753,9 @@
 	};
 
 	lvds-channel@1 {
-		//crtc = "ipu1-di0";
+		crtc = "ipu1-di1";
 		fsl,data-mapping = "spwg";
+		//BBBfsl,data-width = <24>;
 		fsl,data-width = <18>;
 		status = "okay";
 		primary;
@@ -628,11 +851,27 @@
 };
 
 &usdhc4 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_usdhc4_2>;
-    cd-gpios = <&gpio2 6 0>;
-    vmmc-supply = <&sw2_reg>;
-    status = "okay";
+	pinctrl-names = "default";//, "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc4_1>;
+	//pinctrl-1 = <&pinctrl_usdhc4_1_100mhz>;
+	//pinctrl-2 = <&pinctrl_usdhc4_1_200mhz>;
+	bus-width = <4>;
+	/*
+	 * overwrite cd-gpios and wp-gpios since they are reused as eMMC DATA
+	 * signals after rework
+	 */
+	cd-gpios = <>;
+	wp-gpios = <>;
+	no-1-8-v;
+	//keep-power-in-suspend;
+	//non-removable;
+	status = "disabled";
+
+    //pinctrl-names = "default";
+    //pinctrl-0 = <&pinctrl_usdhc4_2>;
+    //cd-gpios = <&gpio2 6 0>;
+    //vmmc-supply = <&sw2_reg>;
+    //status = "okay";
 };
 
 &mipi_csi {
@@ -700,6 +939,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpio = <&gpio2 15 GPIO_ACTIVE_LOW>;
-	status = "okay";
+	status = "disabled";
 };
 

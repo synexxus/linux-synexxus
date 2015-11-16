@@ -43,7 +43,7 @@
 		//pwms = <&pwm1 0 5000000>;
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 2 4 8 16 32 48 64 72 96 128 140 196 224 255>;
-		default-brightness-level = <10>;
+		default-brightness-level = <9>;
 
 		// This is the LVDS_PANEL_EN (DISP_PWR_EN Net)
 		// Was &gpio6 14 0 for the Highlander board & on Aristeus
@@ -462,6 +462,15 @@
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00     	0x80000000  	/* USDHC3 CD */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12      	0x0b0b0       	/* USB Hub Reset */
 
+				/* Highlander GPIO Output*/
+				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16      	0x80000000     	/* GPIO1 IO16:  Signal Output ATX_12V_PWR_EN */
+				MX6QDL_PAD_ENET_TXD0__GPIO1_IO30      	0x80000000     	/* GPIO1 IO30:  Signal Output PWRDN# to ADV7604 */
+				MX6QDL_PAD_ENET_TXD1__GPIO1_IO29      	0x80000000     	/* GPIO1 IO29:  Signal Output RESET# to ADV7604 */
+
+				/* Highlander GPIO Input*/
+				MX6QDL_PAD_ENET_RX_ER__GPIO1_IO24      	0x80000000     	/* GPIO1 IO24:  Signal Input INTERRUPT 2 from ADV7604 */
+				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27      	0x80000000     	/* GPIO1 IO27:  Signal Input INTERRUPT 1 from ADV7604  */
+
 				>;
 		};
 
@@ -493,21 +502,19 @@
 
 &ldb {
 	compatible = "fsl,imx6q-ldb";
-	//split-mode =<1>;lvds
-	//split-mode = <1>;
-	//dual-mode = <1>;
+	//split-mode =<1>;
+	dual-mode = <1>;
 	status = "okay";
 
 	lvds-channel@0 {
 		crtc = "ipu1-di0";		
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <18>;
-		primary;
 		status = "okay";
+		primary;
 
 		display-timings {
 			native-mode = <&XGA_LVDS0>;
-
 			XGA_LVDS0: XGA-R-0 {
 				clock-frequency = <65000000>;
 				hactive = <1024>;
@@ -541,7 +548,6 @@
 
 		display-timings {
 			native-mode = <&XGA_LVDS1>;
-			
 			XGA_LVDS1:  XGA-R-1 {
 				clock-frequency = <65000000>;
 				hactive = <1024>;
@@ -564,7 +570,6 @@
 				vback-porch = <14>;
 				vsync-len = <6>;
 			};
-
 		};
 	};
 };

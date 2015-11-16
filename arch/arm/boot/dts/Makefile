@@ -153,6 +153,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-ta.dtb \
 	imx6q-vp.dtb \
 	imx6q-aristeus.dtb \
+	imx6q-highlander.dtb \
+	imx6q-appaloosa.dtb \
 	imx6sl-evk.dtb \
 	imx6sl-evk-csi.dtb \
 	imx6sl-evk-ldo.dtb \
