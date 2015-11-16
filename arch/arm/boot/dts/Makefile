@@ -142,6 +142,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-sabreauto-flexcan1.dtb \
 	imx6q-sabreauto-gpmi-weim.dtb \
 	imx6q-sabrelite.dtb \
+	imx6q-aristeus-LVDS1-1024-24.dtb \
 	imx6q-sabrelite-nolcd.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-enetirq.dtb \

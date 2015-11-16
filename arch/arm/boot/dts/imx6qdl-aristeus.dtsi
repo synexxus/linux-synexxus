@@ -14,16 +14,10 @@
 
 / {
 	aliases {
-		/*
-		mxcfb0 = &mxcfb1;
-		mxcfb1 = &mxcfb2;
-		mxcfb2 = &mxcfb3;
-		mxcfb3 = &mxcfb4;
-		*/
-                mxcfb0 = &hdmi_display;
-                mxcfb1 = &lvds_display;
-                mxcfb2 = &lcd_display;
-                mxcfb3 = &lvds_display_2;
+		mxcfb0 = &hdmi_display;
+		mxcfb1 = &lvds_display;
+		mxcfb2 = &lcd_display;
+		mxcfb3 = &lvds_display_2;
 		hdmi_display = &hdmi_display;
 		lvds_display = &lvds_display;
 		lcd_display = &lcd_display;
@@ -202,7 +196,7 @@
 		ipu_id = <1>;
 		csi_id = <1>;
 		mclk_source = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	v4l2_out {
@@ -334,8 +328,8 @@
 		rst-gpios = <&gpio6 1 0>;	/* ARISTEUS TEST BOARD RESET */
 		ipu_id = <1>;
 		csi_id = <1>;
-		//mclk = <24000000>;		// Gated Mode
-		mclk = <0>;			// BT.656
+		mclk = <24000000>;		// Gated Mode
+		//mclk = <0>;			// BT.656
 		mclk_source = <0>;
 	};
 
@@ -536,7 +530,7 @@
 	lvds-channel@1 {
 		crtc = "ipu1-di1";
 		fsl,data-mapping = "spwg";
-		fsl,data-width = <18>;
+		fsl,data-width = <24>;
 		status = "okay";
 
 		display-timings {
