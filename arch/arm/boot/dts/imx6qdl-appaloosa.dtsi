@@ -379,8 +379,8 @@
         };
 };
 
-/*
-&ecspi3 {
+
+/*&ecspi3 {
 	fsl,spi-num-chipselects = <4>;
 	cs-gpios = <&gpio4 24 0>,
 		   <&gpio4 25 0>,
@@ -413,8 +413,8 @@
                 spi-max-frequency = <30000000>;
                 reg = <3>;
         };
-};
-*/
+};*/
+
 
 &esai {
 	pinctrl-names = "default";
@@ -601,6 +601,12 @@
 				regulator-always-on;
 			};
 		};
+	};
+	crtouch_screen: crtouch@49 {
+		compatible = "fsl,crtouch_mt";
+		reg = <0x49>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <20 0x2>; /*Pin Active high to low edge*/
 	};
 
 };
