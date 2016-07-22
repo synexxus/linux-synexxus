@@ -156,7 +156,7 @@
 			#interrupt-cells = <1>;
 			clocks = <&clks 189>, <&clks 187>, <&clks 144>, <&clks 212>;
 			clock-names = "pcie_ref_125m", "sata_ref_100m", "pcie_axi", "lvds_gate";
-			status = "disabled";
+			status = "okay";
 		};
 
 		pmu {

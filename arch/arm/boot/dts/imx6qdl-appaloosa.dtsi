@@ -14,12 +14,6 @@
 
 / {
 	aliases {
-		/*
-		mxcfb0 = &mxcfb1;
-		mxcfb1 = &mxcfb2;
-		mxcfb2 = &mxcfb3;
-		mxcfb3 = &mxcfb4;
-		*/
                 mxcfb0 = &hdmi_display;
                 mxcfb1 = &lvds_display;
                 mxcfb2 = &lcd_display;
@@ -94,59 +88,11 @@
 		};
 	};
 
-/*
-	mxcfb1: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		//BBBdefault_bpp = <16>;
-		default_bpp = <10>;
-		int_clk = <0>;
-		late_init = <0>;
-		//BBBstatus = "disabled";
-		status = "okay";
-	};
-
-	mxcfb2: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1920x1080M@60";
-		default_bpp = <24>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	mxcfb3: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "lcd";
-		interface_pix_fmt = "RGB666";
-		//BBBinterface_pix_fmt = "RGB565";
-		//BBBmode_str ="CLAA-WVGA";
-		//BBBdefault_bpp = <16>;
-		default_bpp = <10>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	mxcfb4: fb@3 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-*/
-
 	hdmi_display: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
+		mode_str ="1024x768M@60";
 		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
@@ -182,7 +128,6 @@
 		default_bpp = <10>;
 		int_clk = <0>;
 		late_init = <0>;
-		//BBBstatus = "disabled";
 		status = "okay";
 	};
 
@@ -193,7 +138,7 @@
 		default_ifmt = "RGB666";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ipu1_4>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	sound-hdmi {
@@ -221,59 +166,60 @@
 		compatible = "gpio-keys";
 		
 		exInput0 {
-			label = "KEY 0";
-			gpios = <&expander 0 GPIO_ACTIVE_LOW>;	
-			linux,code = <11>;      
-                };
+			label = "KEY_BRIGHTNESSDOWN";
+			gpios = <&expander 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_BRIGHTNESSDOWN>;
+	        };
 		exInput1 {
-                        label = "KEY 1";
-                        gpios = <&expander 1 GPIO_ACTIVE_LOW>;  
-                        linux,code = <2>;       
-                };
+			label = "KEY_BRIGHTNESSUP";
+			gpios = <&expander 1 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_BRIGHTNESSUP>; 
+		};
 		exInput2 {
-                        label = "KEY 2";
-                        gpios = <&expander 2 GPIO_ACTIVE_LOW>;  
-                        linux,code = <3>;       
-                };
+			label = "KEY_SPACE";
+			gpios = <&expander 2 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_SPACE>;
+		};
 		exInput3 {
-                        label = "KEY 3";
-                        gpios = <&expander 3 GPIO_ACTIVE_LOW>;  
-                        linux,code = <4>;     
-                };
+			label = "KEY_DISPLAY_OFF";
+			gpios = <&expander 3 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_DISPLAY_OFF>;
+		};
 		exInput4 {
                         label = "KEY 4";
-                        gpios = <&expander 4 GPIO_ACTIVE_LOW>;  
-                        linux,code = <5>;      
+                        gpios = <&expander 4 GPIO_ACTIVE_LOW>;
+                        linux,code = <5>;
                 };
 		exInput5 {
                         label = "KEY 5";
-                        gpios = <&expander 5 GPIO_ACTIVE_LOW>;  
-                        linux,code = <6>;     
+                        gpios = <&expander 5 GPIO_ACTIVE_LOW>;
+                        linux,code = <6>;
                 };
 		exInput6 {
-                        label = "KEY 6";
-                        gpios = <&expander 6 GPIO_ACTIVE_LOW>;  
-                        linux,code = <7>;      
-                };
+			label = "KEY_KEYBOARD";
+			gpios = <&expander 6 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_MEDIA>;
+		};
 		exInput7 {
-                        label = "KEY 7";
-                        gpios = <&expander 7 GPIO_ACTIVE_LOW>;  
-                        linux,code = <8>;      
-                };
+			label = "KEY_ENTER";
+			gpios = <&expander 7 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_ENTER>;
+		};
+
 		exInput8 {
                         label = "KEY 8";
                         gpios = <&expander 8 GPIO_ACTIVE_LOW>;
-                        linux,code = <9>;    
+                        linux,code = <9>;
                 };
                 exInput9 {
                         label = "KEY 9";
                         gpios = <&expander 9 GPIO_ACTIVE_LOW>;
-                        linux,code = <10>;       
+                        linux,code = <10>;
                 };
                 exInput10 {
                         label = "KEY A";
                         gpios = <&expander 10 GPIO_ACTIVE_LOW>;
-                        linux,code = <30>;    
+                        linux,code = <30>;
                 };
                 exInput11 {
                         label = "KEY B";
@@ -319,15 +265,6 @@
 	};
 };
 
-
-/*
-	//Highlander uses AUDMUX4 out of the SD2 area
-&audmux {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_audmux_4>;
-	status = "okay";
-};
-*/
 
 &ecspi1 {
 	fsl,spi-num-chipselects = <2>;
@@ -452,29 +389,48 @@
 	pu-supply=<&reg_pu>;
 };
 
-&hdmi_audio {
-    status = "okay";
-};
-
-&hdmi_cec {
-    pinctrl-names = "default";
-    // pinctrl-0 = <&pinctrl_hdmi_cec_2>; // Use KEY_ROW2 for CEC_IN
-    pinctrl-0 = <&pinctrl_hdmi_cec_1>;	// Use EIM_A25 for CEC_IN
-    status = "okay";
-};
-
 &hdmi_core {
-    ipu_id = <0>;
-    disp_id = <1>;
-    status = "okay";
+	compatible = "fsl,imx6dl-hdmi-core";
+        reg = <0x00120000 0x9000>;
+        clocks = <&clks 124>, <&clks 123>, <&clks 138>;
+        clock-names = "hdmi_isfr", "hdmi_iahb", "mipi_core";
+	ipu_id = <0>;
+	disp_id = <1>;
+        status = "okay";
 };
+
+/*&hdmi_video: hdmi_video@020e0000 {*/
 
 &hdmi_video {
-    fsl,phy_reg_vlev = <0x0294>;
-    fsl,phy_reg_cksymtx = <0x800d>;
-    status = "okay";
+	compatible = "fsl,imx6dl-hdmi-video";
+        reg =  <0x020e0000 0x1000>;
+        reg-names = "hdmi_gpr";
+        interrupts = <0 115 0x04>;
+        clocks = <&clks 124>, <&clks 123>, <&clks 138>;
+        clock-names = "hdmi_isfr", "hdmi_iahb", "mipi_core";
+        status = "disabled";
 };
 
+/*hdmi_audio: hdmi_audio@00120000 {*/
+&hdmi_audio {
+	compatible = "fsl,imx6dl-hdmi-audio";
+        clocks = <&clks 124>, <&clks 123>, <&clks 138>;
+        clock-names = "hdmi_isfr", "hdmi_iahb", "mipi_core";
+        dmas = <&sdma 2 22 0>;
+        dma-names = "tx";
+        status = "disabled";
+};
+
+
+/*hdmi_cec: hdmi_cec@00120000 {*/
+&hdmi_cec {
+	compatible = "fsl,imx6dl-hdmi-cec";
+        interrupts = <0 115 0x04>;
+    	pinctrl-names = "default";
+    	// pinctrl-0 = <&pinctrl_hdmi_cec_2>; // Use KEY_ROW2 for CEC_IN
+    	pinctrl-0 = <&pinctrl_hdmi_cec_1>;  // Use EIM_A25 for CEC_IN
+        status = "disabled";
+};
 
 &i2c1 {
     clock-frequency = <100000>;
@@ -618,6 +574,11 @@
 	pinctrl-0 = <&pinctrl_i2c2_2>;
 	status = "okay";
 
+	hdmi: edid@50 {
+                compatible = "fsl,imx6-hdmi-i2c";
+                reg = <0x50>;
+        };
+
 	/* Pericom is on this one! */
 };
 
@@ -645,7 +606,7 @@
 	imx6q-aristeus {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0		/* CAN STBY */
+				//MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0		/* CAN STBY */
 				//MX6QDL_PAD_EIM_D19__GPIO3_IO19      	0x80000000  	/* spi-nor CS1 */
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27    	0x000b0     	/* ethernet phy reset */
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28   	0x1b0b0     	/* ethernet phy interrupt */
@@ -653,7 +614,7 @@
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12      	0x0b0b0       	/* USB Hub Reset */
 
 				//MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* (Output with pullup) USDHC4 (eMMC) RESET Signal*/
-				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x80000000		/* Use u-boot's configuration USDHC4 (eMMC) RESET Signal*/
+				//MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x80000000		/* Use u-boot's configuration USDHC4 (eMMC) RESET Signal*/
 				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x1b0b0		/* EN/VDDIO signal for the backlight driver (LP8860) */
 				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x1b0b0		/* PANEL Enable Signal GPIO */
 				>;
@@ -661,9 +622,11 @@
 
 		pinctrl_pcie: pciegrp {
 			fsl,pins = <
-				MX6QDL_PAD_SD4_DAT7__GPIO2_IO15		0x000b0		/* pcie reset */
-				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0		/* Power-on-GPIO*/
-				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* False wake up signal*/
+				//MX6QDL_PAD_NANDF_WP_B__IPU2_SISG5                 0x000b0         /* pcie reset ==> Used to be emmc reset. Is pin E15 GPIO6 IO09*/
+				//MX6QDL_PAD_SD4_DAT7__GPIO2_IO15		0x000b0		/* REV. 3 PCIE reset */
+				MX6QDL_PAD_GPIO_19__GPIO4_IO05			0x000b0		/* REV. 4 PCIE Reset */
+				//MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0		/* Power-on-GPIO*/
+				//MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* False wake up signal*/
 				//MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x000b0		/* disable-gpio*/
 			>;
 		};
@@ -880,8 +843,7 @@
     //status = "okay";
 };
 
-&mipi_csi {
-	status = "okay";
+/*&mipi_csi {
 	ipu_id = <0>;
 	csi_id = <1>;
 	v_channel = <0>;
@@ -896,7 +858,7 @@
 	//disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
 	//resets = <&mipi_dsi_reset>;
 	status = "disabled";
-};
+};*/
 
 &pwm1 {
     pinctrl-names = "default";
@@ -944,7 +906,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = <&gpio2 15 GPIO_ACTIVE_LOW>;
-	status = "disabled";
+	reset-gpio = <&gpio4 19 GPIO_ACTIVE_LOW>;
+	status = "okay";
 };
 
