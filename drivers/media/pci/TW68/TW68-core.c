@@ -5,6 +5,7 @@
  *
  */
 
+
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -21,7 +22,6 @@
 
 #include "TW68.h"
 #include "TW68_defines.h"
-
 
 MODULE_DESCRIPTION("v4l2 driver module for TW6868/6869 based CVBS video capture cards");
 MODULE_AUTHOR("Simon Xu 2011-2013 @intersil");

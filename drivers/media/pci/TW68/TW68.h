@@ -6,6 +6,8 @@
  *
  */
 
+#define DEBUG
+
 #include <linux/version.h>
 #include <linux/pci.h>
 #include <linux/i2c.h>
