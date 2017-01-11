@@ -633,6 +633,22 @@ static ssize_t crtouch_read(struct file *filep,
 		case HORIZONTAL_RESOLUTION_LBS:
 		case VERTICAL_RESOLUTION_MBS:
 		case VERTICAL_RESOLUTION_LBS:
+		case X1_CALIBRATION_MSB:
+		case X1_CALIBRATION_LSB:
+		case X2_CALIBRATION_MSB:
+		case X2_CALIBRATION_LSB:
+		case X3_CALIBRATION_MSB:
+		case X3_CALIBRATION_LSB:
+		case Y1_CALIBRATION_MSB:
+		case Y1_CALIBRATION_LSB:
+		case Y2_CALIBRATION_MSB:
+		case Y2_CALIBRATION_LSB:
+		case Y3_CALIBRATION_MSB:
+		case Y3_CALIBRATION_LSB:
+		case X_CALIBRATION_CONST_MSB:
+		case X_CALIBRATION_CONST_LSB:
+		case Y_CALIBRATION_CONST_MSB:
+		case Y_CALIBRATION_CONST_LSB:
 		case SLIDE_STEPS:
 		case SYSTEM_CONFIG_NOTE2:
 		case DC_TRACKER_RATE:
@@ -690,17 +706,13 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 
 	switch (*data_to_write) {
 
+	/* 0x40 - 0x41 */
 	case CONFIGURATION:
-	case X_SETTLING_TIME_MBS:
-	case X_SETTLING_TIME_LBS:
-	case Y_SETTLING_TIME_MBS:
-	case Y_SETTLING_TIME_LBS:
+	case TRIGGER_EVENTS:
+
+
 	case Z_SETTLING_TIME_MBS:
 	case Z_SETTLING_TIME_LBS:
-	case HORIZONTAL_RESOLUTION_MBS:
-	case HORIZONTAL_RESOLUTION_LBS:
-	case VERTICAL_RESOLUTION_MBS:
-	case VERTICAL_RESOLUTION_LBS:
 	case SLIDE_STEPS:
 	case SYSTEM_CONFIG_NOTE2:
 	case DC_TRACKER_RATE:
@@ -710,7 +722,6 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	case CONTROL_CONFIG:
 	case AUTO_REPEAT_RATE:
 	case AUTO_REPEAT_START:
-	case TRIGGER_EVENTS:
 
 		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0xFF))
 			i2c_smbus_write_byte_data(client_public,
@@ -719,17 +730,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 			printk(KERN_DEBUG "invalid range of data\n");
 
 		break;
-
-
-	case RESPONSE_TIME:
-
-		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0x3F))
-			i2c_smbus_write_byte_data(client_public,
-					*data_to_write, *(data_to_write+1));
-		else
-			printk(KERN_DEBUG "invalid range of data\n");
-		break;
-
+	/* 0x42 */
 	case FIFO_SETUP:
 		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0x1F))
 			i2c_smbus_write_byte_data(client_public,
@@ -737,9 +738,68 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
 		break;
-
+	/* 0x43 */
 	case SAMPLING_X_Y:
 		if ((*(data_to_write + 1) >= 0x05) && (*(data_to_write + 1) <= 0x64))
+			i2c_smbus_write_byte_data(client_public,
+					*data_to_write, *(data_to_write+1));
+		else
+			printk(KERN_DEBUG "invalid range of data\n");
+		break;
+	/* 0x44 - 0x47 */
+	case X_SETTLING_TIME_MBS:
+	case X_SETTLING_TIME_LBS:
+	case Y_SETTLING_TIME_MBS:
+	case Y_SETTLING_TIME_LBS:
+
+		if ((*(data_to_write + 1) >= 0x000E) && (*(data_to_write + 1) <= 0x012C))
+			i2c_smbus_write_byte_data(client_public,
+					*data_to_write, *(data_to_write+1));
+		else
+			printk(KERN_DEBUG "invalid range of data\n");
+		break;
+	/* 0x4A - 0x4D */
+	case HORIZONTAL_RESOLUTION_MBS:
+	case HORIZONTAL_RESOLUTION_LBS:
+	case VERTICAL_RESOLUTION_MBS:
+	case VERTICAL_RESOLUTION_LBS:
+
+		if ((*(data_to_write + 1) >= 0x0030) && (*(data_to_write + 1) <= 0x2000))
+			i2c_smbus_write_byte_data(client_public,
+					*data_to_write, *(data_to_write+1));
+		else
+			printk(KERN_DEBUG "invalid range of data\n");
+		break;
+	/* 0x4F - 0x5E */
+	case X1_CALIBRATION_MSB:
+	case X1_CALIBRATION_LSB:
+	case X2_CALIBRATION_MSB:
+	case X2_CALIBRATION_LSB:
+	case X3_CALIBRATION_MSB:
+	case X3_CALIBRATION_LSB:
+
+	case Y1_CALIBRATION_MSB:
+	case Y1_CALIBRATION_LSB:
+	case Y2_CALIBRATION_MSB:
+	case Y2_CALIBRATION_LSB:
+	case Y3_CALIBRATION_MSB:
+	case Y3_CALIBRATION_LSB:
+
+	case X_CALIBRATION_CONST_MSB:
+	case X_CALIBRATION_CONST_LSB:
+	case Y_CALIBRATION_CONST_MSB:
+	case Y_CALIBRATION_CONST_LSB:
+
+		if ((*(data_to_write + 1) >= 0x0000) && (*(data_to_write + 1) <= 0xFFFF))
+			i2c_smbus_write_byte_data(client_public,
+					*data_to_write, *(data_to_write+1));
+		else
+			printk(KERN_DEBUG "invalid range of data\n");
+		break;
+
+	case RESPONSE_TIME:
+
+		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0x3F))
 			i2c_smbus_write_byte_data(client_public,
 					*data_to_write, *(data_to_write+1));
 		else

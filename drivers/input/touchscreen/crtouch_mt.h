@@ -145,6 +145,29 @@ slide:
 #define AUTO_REPEAT_START			0x6F
 #define MAX_TOUCHES				0x70
 
+/* Calibration values */
+#define X1_CALIBRATION_MSB			0x4F
+#define X1_CALIBRATION_LSB			0x50
+#define X2_CALIBRATION_MSB			0x51
+#define X2_CALIBRATION_LSB			0x52
+#define X3_CALIBRATION_MSB			0x53
+#define X3_CALIBRATION_LSB			0x54
+
+#define Y1_CALIBRATION_MSB			0x55
+#define Y1_CALIBRATION_LSB			0x56
+#define Y2_CALIBRATION_MSB			0x57
+#define Y2_CALIBRATION_LSB			0x58
+#define Y3_CALIBRATION_MSB			0x59
+#define Y3_CALIBRATION_LSB			0x5A
+
+#define X_CALIBRATION_CONST_MSB		0x5B
+#define X_CALIBRATION_CONST_LSB		0x5C
+
+#define Y_CALIBRATION_CONST_MSB		0x5D
+#define Y_CALIBRATION_CONST_LSB		0x5E
+
+
+
 /*mask status registers*/
 #define MASK_EVENTS				0x7F
 #define MASK_PRESSED				0x80
