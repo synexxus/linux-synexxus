@@ -84,6 +84,16 @@ config MXC_IPU_PRP_VF_SDC
 
 endchoice
 
+config MXC_DECODER_ADV7604
+    tristate "mxc ADV7604 support"
+    depends on !VIDEO_MXC_EMMA_CAMERA && I2C
+    ---help---
+        If you plan to use the adv7604 with your MXC system, say Y here.
+        Use Case:
+            ADV7604 -> CSI
+            CSI -> IPU System
+            =================
+
 config MXC_IPU_PRP_ENC
 	tristate "Pre-processor Encoder library"
 	depends on VIDEO_MXC_IPU_CAMERA
