@@ -289,6 +289,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-sabreauto-flexcan1.dtb \
 	imx6dl-sabreauto-gpmi-weim.dtb \
 	imx6dl-sabrelite.dtb \
+	imx6q-appaloosa.dtb \
 	imx6dl-sabresd.dtb \
 	imx6dl-sabresd-btwifi.dtb \
 	imx6dl-sabresd-enetirq.dtb \
