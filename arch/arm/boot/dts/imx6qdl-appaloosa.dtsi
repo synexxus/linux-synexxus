@@ -166,14 +166,14 @@
 		compatible = "gpio-keys";
 			
 		exInput0 {
-			label = "KEY_BRIGHTNESSDOWN";
+			label = "KEY_PAGEDOWN";
 			gpios = <&expander 0 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_BRIGHTNESSDOWN>;
+			linux,code = <KEY_PAGEDOWN>;
 	        };
 		exInput1 {
-			label = "KEY_BRIGHTNESSUP";
+			label = "KEY_PAGEUP";
 			gpios = <&expander 1 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_BRIGHTNESSUP>; 
+			linux,code = <KEY_PAGEUP>; 
 		};
 		exInput2 {
 			label = "KEY_SPACE";
@@ -181,9 +181,9 @@
 			linux,code = <KEY_SPACE>;
 		};
 		exInput3 {
-			label = "KEY_DISPLAY_OFF";
+			label = "KEY_HOME";
 			gpios = <&expander 3 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_DISPLAY_OFF>;
+			linux,code = <KEY_HOME>;
 		};
 		exInput4 {
                         label = "KEY 4";
@@ -196,9 +196,9 @@
                         linux,code = <6>;
                 };
 		exInput6 {
-			label = "KEY_KEYBOARD";
+			label = "KEY_NUMLOCK";
 			gpios = <&expander 6 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_MEDIA>;
+			linux,code = <KEY_NUMLOCK>;
 		};
 		exInput7 {
 			label = "KEY_ENTER";
